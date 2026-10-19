@@ -1,0 +1,604 @@
+/*
+ * Bamboo Personas Selector Design System
+ * -------------------------------------------------------------
+ * Procedural bamboo stalk pole system:
+ * - Cylindrical shading with glossy top highlight and deep ground shadow
+ * - Fibrous bamboo grain striations
+ * - Raised node rings (joints) with crease lines
+ * - Cut ends with visible hollow inner core
+ * - Peeled pale wood inner patch for readable upright text
+ * - Sprouting leaf branches on nodes
+ *
+ * Free CC0 Reference: ambientCG (Bamboo001 PBR CC0)
+ * Reference URL: https://ambientcg.com/view?id=Bamboo001
+ * License: Creative Commons CC0 1.0 Universal (Public Domain)
+ * -------------------------------------------------------------
+ */
+
+:root {
+  /* 1. Fresh Green Bamboo (Yasmin) */
+  --bamboo-green-highlight: #dffeb6;
+  --bamboo-green-mid: #8de450;
+  --bamboo-green-base: #53b328;
+  --bamboo-green-dark: #1e590e;
+  --bamboo-green-node-ridge: #b2f56f;
+  --bamboo-green-node-crease: #113408;
+  --bamboo-green-outline: #18480b;
+  --bamboo-green-patch-bg: #f3fced;
+  --bamboo-green-patch-border: #7ecb4c;
+  --bamboo-green-patch-text: #133309;
+  --bamboo-green-glow: rgba(118, 255, 3, 0.65);
+
+  /* 2. Yellow-Green Bamboo (Ahmed) */
+  --bamboo-yg-highlight: #fffebe;
+  --bamboo-yg-mid: #dfec5c;
+  --bamboo-yg-base: #a7be32;
+  --bamboo-yg-dark: #5c7014;
+  --bamboo-yg-node-ridge: #ecf87c;
+  --bamboo-yg-node-crease: #3d4a0b;
+  --bamboo-yg-outline: #384209;
+  --bamboo-yg-patch-bg: #fdfde8;
+  --bamboo-yg-patch-border: #bcd342;
+  --bamboo-yg-patch-text: #2b3508;
+  --bamboo-yg-glow: rgba(223, 236, 92, 0.65);
+
+  /* 3. Dried Wooden Bamboo (Tareq) */
+  --bamboo-wood-highlight: #ffebd0;
+  --bamboo-wood-mid: #e9be81;
+  --bamboo-wood-base: #b88642;
+  --bamboo-wood-dark: #633f14;
+  --bamboo-wood-node-ridge: #f0c992;
+  --bamboo-wood-node-crease: #381f06;
+  --bamboo-wood-outline: #45290b;
+  --bamboo-wood-patch-bg: #fffbf2;
+  --bamboo-wood-patch-border: #cca263;
+  --bamboo-wood-patch-text: #361e06;
+  --bamboo-wood-glow: rgba(233, 190, 129, 0.65);
+
+  /* Common Stalk Dimensions */
+  --bamboo-stalk-height: 144px;
+}
+
+/* Bamboo Personas Container */
+.bamboo-personas-wrapper {
+  width: 100%;
+  position: relative;
+  padding: 30px 0 20px 0;
+}
+
+.bamboo-personas-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 32px;
+  align-items: center;
+  position: relative;
+}
+
+/* Responsive: 1 column under 900px with generous vertical gap */
+@media (max-width: 900px) {
+  .bamboo-personas-grid {
+    grid-template-columns: 1fr;
+    gap: 46px;
+  }
+}
+
+/* Bamboo Stalk Button (Parent Interactive Container) */
+.bamboo-stalk-button {
+  position: relative;
+  width: 100%;
+  height: var(--bamboo-stalk-height);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  user-select: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  outline: none;
+  border-radius: 36px;
+  transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+[dir="rtl"] .bamboo-stalk-button {
+  text-align: right;
+}
+
+/* Focus Visible for Accessibility */
+.bamboo-stalk-button:focus-visible {
+  outline: 3px solid #76ff03;
+  outline-offset: 6px;
+}
+
+/* Bamboo Stalk Body (The complete cylindrical horizontal stalk) */
+.bamboo-stalk-body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  border-radius: 36px;
+  border: 2.5px solid var(--cur-bamboo-outline);
+  box-shadow:
+    0 16px 34px rgba(0, 0, 0, 0.55),
+    0 4px 10px rgba(0, 0, 0, 0.35),
+    inset 0 2px 4px rgba(255, 255, 255, 0.5);
+  transform: rotate(var(--bamboo-tilt, 0deg));
+  transform-origin: center center;
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+              box-shadow 0.4s ease,
+              filter 0.4s ease;
+  overflow: visible;
+  z-index: 1;
+}
+
+/* Left Clean-Cut End with Clearly Visible Hollow Core */
+.bamboo-cut-end {
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: calc(100% + 4px);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at 40% 50%,
+    #071005 0%,
+    #11210d 30%,
+    var(--cur-bamboo-dark) 60%,
+    var(--cur-bamboo-base) 80%,
+    var(--cur-bamboo-highlight) 100%
+  );
+  border: 2.5px solid var(--cur-bamboo-outline);
+  box-shadow:
+    inset 0 3px 8px rgba(0, 0, 0, 0.95),
+    4px 0 8px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+}
+
+.bamboo-cut-rim {
+  width: 24px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+}
+
+.bamboo-hollow-circle {
+  width: 12px;
+  height: 28px;
+  border-radius: 50%;
+  background: #020602;
+  box-shadow: inset 0 3px 6px #000000;
+}
+
+/* Circular Initial Badge sitting on Node Joint 1 */
+.bamboo-node-badge {
+  position: absolute;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--cur-bamboo-dark);
+  border: 2px solid var(--cur-bamboo-node-ridge);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.6),
+    inset 0 1px 2px rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  font-size: 1.15rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  transition: all 0.3s ease;
+  z-index: 8;
+}
+
+.bamboo-stalk-button.is-selected .bamboo-node-badge {
+  background: #2e7d32;
+  border-color: #76ff03;
+  box-shadow:
+    0 0 16px rgba(118, 255, 3, 0.85),
+    inset 0 1px 3px rgba(255, 255, 255, 0.5);
+  color: #ffffff;
+}
+
+.bamboo-internode-1 {
+  width: 32px;
+  border-top-left-radius: 34px;
+  border-bottom-left-radius: 34px;
+  flex-shrink: 0;
+}
+
+/* Bamboo Internodes (Segments between nodes) */
+.bamboo-internode {
+  position: relative;
+  height: 100%;
+  background:
+    /* Long vertical streaks along the length of bamboo */
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 10px,
+      rgba(255, 255, 255, 0.08) 10px,
+      rgba(255, 255, 255, 0.08) 12px,
+      transparent 12px,
+      transparent 22px,
+      rgba(0, 0, 0, 0.07) 22px,
+      rgba(0, 0, 0, 0.07) 24px
+    ),
+    /* Cylinder shading: light along top, dark underneath */
+    linear-gradient(
+      180deg,
+      var(--cur-bamboo-highlight) 0%,
+      var(--cur-bamboo-mid) 18%,
+      var(--cur-bamboo-base) 62%,
+      var(--cur-bamboo-dark) 100%
+    );
+}
+
+.bamboo-internode-1 {
+  width: 22px;
+  border-top-left-radius: 32px;
+  border-bottom-left-radius: 32px;
+  flex-shrink: 0;
+}
+
+.bamboo-internode-2 {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+}
+
+.bamboo-internode-3 {
+  width: 28px;
+  border-top-right-radius: 32px;
+  border-bottom-right-radius: 32px;
+  flex-shrink: 0;
+}
+
+/* Right Cut Cap */
+.bamboo-right-cap {
+  position: absolute;
+  right: -3px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: calc(100% - 6px);
+  border-radius: 0 30px 30px 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.45) 100%);
+  z-index: 3;
+}
+
+/* Raised Bamboo Node Joints */
+.bamboo-joint {
+  position: relative;
+  width: 16px;
+  height: calc(100% + 8px);
+  margin: 0 -2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  flex-shrink: 0;
+}
+
+.bamboo-joint-ridge {
+  position: absolute;
+  width: 12px;
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    var(--cur-bamboo-node-ridge) 24%,
+    var(--cur-bamboo-base) 68%,
+    var(--cur-bamboo-dark) 100%
+  );
+  box-shadow:
+    -2px 0 5px rgba(0, 0, 0, 0.5),
+    2px 0 5px rgba(255, 255, 255, 0.4),
+    inset 0 1px 2px rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--cur-bamboo-node-crease);
+}
+
+.bamboo-joint-crease {
+  position: absolute;
+  width: 2.5px;
+  height: 94%;
+  background: var(--cur-bamboo-node-crease);
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.9);
+  border-radius: 1px;
+}
+
+/* Bamboo Sprout / Leaf Branch Growing from Node */
+.bamboo-sprout-branch {
+  position: absolute;
+  top: -30px;
+  left: -8px;
+  width: 46px;
+  height: 46px;
+  pointer-events: none;
+  z-index: 10;
+  transform: rotate(-10deg) scale(0.95);
+  transform-origin: bottom left;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+              filter 0.4s ease;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.bamboo-sprout-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.bamboo-stalk-button:hover .bamboo-sprout-branch {
+  transform: rotate(-16deg) scale(1.12);
+}
+
+.bamboo-stalk-button.is-selected .bamboo-sprout-branch {
+  transform: rotate(-22deg) scale(1.32);
+  filter: drop-shadow(0 0 12px rgba(118, 255, 3, 0.85)) drop-shadow(0 3px 5px rgba(0, 0, 0, 0.6));
+}
+
+/* Carved Peeled Patch of Pale Wood in the Bamboo Stalk Center */
+.bamboo-carved-patch {
+  width: 100%;
+  height: 100%;
+  border-radius: 20px;
+  background: var(--cur-bamboo-patch-bg);
+  border: 1.5px solid var(--cur-bamboo-patch-border);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.22),
+    0 1px 2px rgba(255, 255, 255, 0.6);
+  padding: 10px 14px 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+/* Upright Content inside the Patch (Counter-rotates to stay 100% horizontal) */
+.bamboo-upright-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  color: var(--cur-bamboo-patch-text);
+  transform: rotate(calc(-1 * var(--bamboo-tilt, 0deg)));
+  transform-origin: center center;
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  padding: 2px 4px;
+}
+
+.bamboo-patch-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.bamboo-name-role {
+  min-width: 0;
+}
+
+.bamboo-name-text {
+  font-size: 1.05rem;
+  font-weight: 900;
+  line-height: 1.15;
+  color: var(--cur-bamboo-patch-text);
+  letter-spacing: -0.01em;
+}
+
+.bamboo-role-text {
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 700;
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
+/* Speaker Audition Button styled as pressed into the bamboo wood */
+.bamboo-speaker-socket {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--cur-bamboo-patch-text);
+  background: rgba(0, 0, 0, 0.08);
+  border: 1.5px solid rgba(0, 0, 0, 0.22);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(255, 255, 255, 0.7);
+  transition: all 0.25s ease;
+}
+
+.bamboo-stalk-button:hover .bamboo-speaker-socket {
+  background: rgba(0, 0, 0, 0.14);
+  transform: scale(1.08);
+}
+
+.bamboo-stalk-button.is-selected .bamboo-speaker-socket {
+  background: rgba(46, 125, 50, 0.2);
+  border-color: #2e7d32;
+  color: #1b5e20;
+}
+
+/* Carved Groove Divider */
+.bamboo-carved-groove {
+  width: 100%;
+  height: 0px;
+  border-top: 1.5px solid rgba(0, 0, 0, 0.18);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.8);
+  margin: 3px 0;
+}
+
+/* Patch Footer Row */
+.bamboo-patch-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.bamboo-footer-hint {
+  color: var(--cur-bamboo-patch-text);
+  opacity: 0.92;
+}
+
+/* Active Pill (Selected) */
+.bamboo-active-pill {
+  padding: 2px 9px;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #2e7d32;
+  border: 1.5px solid #66bb6a;
+  box-shadow: 0 0 10px rgba(46, 125, 50, 0.6);
+  color: #ffffff;
+}
+
+.bamboo-audition-text {
+  font-size: 0.7rem;
+  font-weight: 600;
+  opacity: 0.65;
+  transition: opacity 0.2s ease;
+}
+
+.bamboo-stalk-button:hover .bamboo-audition-text {
+  opacity: 0.95;
+}
+
+/* ========================================================
+ * 3 BAMBOO COLOR THEMES (CSS Variable Assignments)
+ * ======================================================== */
+
+/* 1. Fresh Green Bamboo */
+.bamboo-type-green {
+  --cur-bamboo-highlight: var(--bamboo-green-highlight);
+  --cur-bamboo-mid: var(--bamboo-green-mid);
+  --cur-bamboo-base: var(--bamboo-green-base);
+  --cur-bamboo-dark: var(--bamboo-green-dark);
+  --cur-bamboo-node-ridge: var(--bamboo-green-node-ridge);
+  --cur-bamboo-node-crease: var(--bamboo-green-node-crease);
+  --cur-bamboo-outline: var(--bamboo-green-outline);
+  --cur-bamboo-patch-bg: var(--bamboo-green-patch-bg);
+  --cur-bamboo-patch-border: var(--bamboo-green-patch-border);
+  --cur-bamboo-patch-text: var(--bamboo-green-patch-text);
+  --cur-bamboo-glow: var(--bamboo-green-glow);
+}
+
+/* 2. Yellow-Green Bamboo */
+.bamboo-type-yellowgreen {
+  --cur-bamboo-highlight: var(--bamboo-yg-highlight);
+  --cur-bamboo-mid: var(--bamboo-yg-mid);
+  --cur-bamboo-base: var(--bamboo-yg-base);
+  --cur-bamboo-dark: var(--bamboo-yg-dark);
+  --cur-bamboo-node-ridge: var(--bamboo-yg-node-ridge);
+  --cur-bamboo-node-crease: var(--bamboo-yg-node-crease);
+  --cur-bamboo-outline: var(--bamboo-yg-outline);
+  --cur-bamboo-patch-bg: var(--bamboo-yg-patch-bg);
+  --cur-bamboo-patch-border: var(--bamboo-yg-patch-border);
+  --cur-bamboo-patch-text: var(--bamboo-yg-patch-text);
+  --cur-bamboo-glow: var(--bamboo-yg-glow);
+}
+
+/* 3. Dried Wooden Bamboo */
+.bamboo-type-wood {
+  --cur-bamboo-highlight: var(--bamboo-wood-highlight);
+  --cur-bamboo-mid: var(--bamboo-wood-mid);
+  --cur-bamboo-base: var(--bamboo-wood-base);
+  --cur-bamboo-dark: var(--bamboo-wood-dark);
+  --cur-bamboo-node-ridge: var(--bamboo-wood-node-ridge);
+  --cur-bamboo-node-crease: var(--bamboo-wood-node-crease);
+  --cur-bamboo-outline: var(--bamboo-wood-outline);
+  --cur-bamboo-patch-bg: var(--bamboo-wood-patch-bg);
+  --cur-bamboo-patch-border: var(--bamboo-wood-patch-border);
+  --cur-bamboo-patch-text: var(--bamboo-wood-patch-text);
+  --cur-bamboo-glow: var(--bamboo-wood-glow);
+}
+
+/* ========================================================
+ * HOVER & SELECTED STATES (Lift, Straighten & Glow)
+ * ======================================================== */
+
+/* Hover: Lift and gentle straighten */
+.bamboo-stalk-button:hover {
+  transform: translateY(-5px);
+}
+
+.bamboo-stalk-button:hover .bamboo-stalk-body {
+  box-shadow:
+    0 22px 42px rgba(0, 0, 0, 0.65),
+    0 6px 14px rgba(0, 0, 0, 0.4);
+  /* Gentle straighten: reduce tilt toward 0deg */
+  transform: rotate(calc(var(--bamboo-tilt, 0deg) * 0.35));
+  filter: brightness(1.08);
+}
+
+.bamboo-stalk-button:hover .bamboo-upright-content {
+  transform: rotate(calc(-1 * var(--bamboo-tilt, 0deg) * 0.35));
+}
+
+/* Selected: Lighter, lifts with warm glow & bright green badge */
+.bamboo-stalk-button.is-selected {
+  transform: translateY(-7px);
+  z-index: 10;
+}
+
+.bamboo-stalk-button.is-selected .bamboo-stalk-body {
+  box-shadow:
+    0 0 0 2.5px #76ff03,
+    0 0 25px var(--cur-bamboo-glow),
+    0 24px 44px rgba(0, 0, 0, 0.65);
+  transform: rotate(calc(var(--bamboo-tilt, 0deg) * 0.5));
+  filter: brightness(1.12);
+}
+
+.bamboo-stalk-button.is-selected .bamboo-upright-content {
+  transform: rotate(calc(-1 * var(--bamboo-tilt, 0deg) * 0.5));
+}
+
+.bamboo-stalk-button.is-selected .bamboo-end-badge {
+  background: #2e7d32;
+  border-color: #76ff03;
+  box-shadow:
+    0 0 16px rgba(118, 255, 3, 0.85),
+    inset 0 1px 3px rgba(255, 255, 255, 0.5);
+  color: #ffffff;
+}
+
+.bamboo-stalk-button.is-selected:hover .bamboo-stalk-body {
+  transform: rotate(calc(var(--bamboo-tilt, 0deg) * 0.25));
+}
+
+.bamboo-stalk-button.is-selected:hover .bamboo-upright-content {
+  transform: rotate(calc(-1 * var(--bamboo-tilt, 0deg) * 0.25));
+}
+
+/* Reduced Motion for Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .bamboo-stalk-button,
+  .bamboo-stalk-button:hover,
+  .bamboo-stalk-button.is-selected,
+  .bamboo-stalk-body,
+  .bamboo-upright-content,
+  .bamboo-sprout-branch {
+    transition: none !important;
+    transform: none !important;
+  }
+}

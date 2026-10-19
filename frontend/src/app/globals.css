@@ -1,0 +1,156 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+@keyframes mapPulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+@keyframes voice-meter {
+  from {
+    transform: scaleY(0.55);
+  }
+  to {
+    transform: scaleY(1.35);
+  }
+}
+
+.voice-ribbon {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: voice-ribbon-breathe 1.1s ease-in-out infinite alternate;
+}
+
+.voice-ribbon-two {
+  animation-delay: 180ms;
+}
+
+.voice-ribbon-three {
+  animation-delay: 320ms;
+}
+
+@keyframes voice-ribbon-breathe {
+  from {
+    transform: scaleY(0.72);
+  }
+  to {
+    transform: scaleY(1.2);
+  }
+}
+
+.map-pulsing-marker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-pulsing-marker::before {
+  content: '';
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(46, 139, 87, 0.6);
+  animation: mapPulse 1.8s infinite cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.leaflet-container {
+  background-color: #78866b !important;
+  font-family: inherit !important;
+}
+
+.leaflet-bar {
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+}
+
+.leaflet-bar a {
+  color: #ffffff !important;
+  background-color: #78866b !important;
+  border: none !important;
+}
+
+.leaflet-bar a:hover {
+  background-color: #636f58 !important;
+}
+
+.leaflet-control-attribution {
+  display: none !important;
+}
+
+/* Keyboard accessibility: outline only on :focus-visible, mouse clicks show no ring */
+*:focus:not(:focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+*:focus-visible {
+  outline: 2px solid #ffffff !important;
+  outline-offset: 2px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:root {
+  --font-roboto: 'Roboto', sans-serif;
+  --color-primary: #2E8B57;
+  --color-secondary: #2E8B57;
+  --color-accent: #78866B;
+  --color-white: #ffffff;
+}
+
+body, html {
+  font-family: 'Roboto', var(--font-roboto), sans-serif;
+  background-color: #2E8B57;
+  color: #ffffff;
+  overflow-x: hidden;
+}
+
+input, button, textarea, select {
+  font-family: inherit;
+  color: inherit;
+}
+
+button {
+  background: transparent;
+}
+
+[dir="rtl"] body, [dir="rtl"], [dir="rtl"] * {
+  font-family: 'Roboto', var(--font-roboto), sans-serif;
+}
+
+/* Custom scrollbar matching palette */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #2E8B57;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #78866B;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #636f58;
+}
