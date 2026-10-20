@@ -21,6 +21,11 @@ export const AGENT_WAVE_CONFIGS: Record<
     colorShift: 0.0,
     lineWidth: 2.2,
   },
+  ready: {
+    color: '#10b981',
+    colorShift: 1.5,
+    lineWidth: 1.8,
+  },
   speaking: {
     color: '#0026ff',
     colorShift: 1.98,
@@ -43,9 +48,18 @@ export const AGENT_WAVE_CONFIGS: Record<
   },
 };
 
+export type ExtendedAgentState =
+  | AgentState
+  | 'disconnected'
+  | 'connecting'
+  | 'ready'
+  | 'listening'
+  | 'thinking'
+  | 'speaking';
+
 export interface LiveAgentWaveProps {
   /** The current agent state */
-  state?: AgentState | 'disconnected' | 'connecting' | 'listening' | 'thinking' | 'speaking';
+  state?: ExtendedAgentState;
   /** Visualizer size */
   size?: 'icon' | 'sm' | 'md' | 'lg' | 'xl' | 'full';
   /** Optional audio track for reactive frequency response */
@@ -64,6 +78,7 @@ export function LiveAgentWave({
   className = 'w-full h-full',
 }: LiveAgentWaveProps) {
   const config = AGENT_WAVE_CONFIGS[state] || AGENT_WAVE_CONFIGS.disconnected;
+  const liveKitState = (state === 'ready' ? 'listening' : state) as AgentState;
 
   return (
     <AgentAudioVisualizerWave
@@ -71,7 +86,7 @@ export function LiveAgentWave({
       color={config.color}
       colorShift={config.colorShift}
       lineWidth={config.lineWidth}
-      state={state as AgentState}
+      state={liveKitState}
       audioTrack={audioTrack}
       volume={volume}
       className={className}

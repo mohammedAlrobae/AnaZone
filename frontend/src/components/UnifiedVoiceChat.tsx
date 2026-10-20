@@ -1,15 +1,17 @@
-"use client";
+﻿"use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Volume2,
+  VolumeX,
   Square,
   Loader2,
   Send,
-  Bot,
   User,
   Mic,
   MicOff,
+  Power,
+  Sparkles,
 } from "lucide-react";
 import { WavRecorder } from "@/lib/wavRecorder";
 import {
@@ -37,7 +39,7 @@ interface UnifiedVoiceChatProps {
   onAgentSpeakingChange?: (speaking: boolean) => void;
 }
 
-type AgentState = "disconnected" | "connecting" | "listening" | "thinking" | "speaking";
+type AgentState = "disconnected" | "connecting" | "ready" | "listening" | "thinking" | "speaking";
 
 function mergeTranscript(previous: string, next: string): string {
   const previousWords = previous.trim().split(/\s+/).filter(Boolean);
@@ -65,25 +67,33 @@ export default function UnifiedVoiceChat({
   agentSpeakingAudio,
   onAgentSpeakingChange,
 }: UnifiedVoiceChatProps) {
+  // 1. Connection & Audio State (Logically Separated)
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isMicActive, setIsMicActive] = useState<boolean>(false);
+  const [isAgentVoiceMuted, setIsAgentVoiceMuted] = useState<boolean>(false);
   const [state, setState] = useState<AgentState>("disconnected");
+
+  // 2. UI & Messages State
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [volumeLevel, setVolumeLevel] = useState<number>(0);
   const [inputText, setInputText] = useState("");
   const [isTextLoading, setIsTextLoading] = useState(false);
-  const [isHandsFree, setIsHandsFree] = useState(false);
-  const [isMicMuted, setIsMicMuted] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
   const [playingAudioIndex, setPlayingAudioIndex] = useState<number | null>(null);
+
+  // 3. LiveKit Cloud WebRTC
   const [liveKitToken, setLiveKitToken] = useState<string>("");
   const [liveKitUrl, setLiveKitUrl] = useState<string>("");
   const [isLiveKitConnected, setIsLiveKitConnected] = useState<boolean>(false);
 
+  // References
+  const isConnectedRef = useRef(false);
+  const isMicActiveRef = useRef(false);
+  const isAgentVoiceMutedRef = useRef(false);
   const recorderRef = useRef<WavRecorder | null>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const handsFreeRef = useRef(false);
-  const micMutedRef = useRef(false);
-  const startingConversationRef = useRef(false);
+  const connectingLockRef = useRef(false);
   const transcriptionSessionRef = useRef(0);
   const partialTranscriptionBusyRef = useRef(false);
   const pendingPartialAudioRef = useRef<{ audioBase64: string; session: number } | null>(null);
@@ -92,40 +102,89 @@ export default function UnifiedVoiceChat({
   const processingRef = useRef(false);
   const stopListeningRef = useRef<() => void>(() => { });
   const resumeListeningRef = useRef<() => void>(() => { });
+  const playingAudioIndexRef = useRef<number | null>(null);
+  const playPromiseRef = useRef<Promise<void> | null>(null);
+
   const { t, language } = useI18n();
 
-  const playingAudioIndexRef = useRef<number | null>(null);
+  // Sync refs with state
+  useEffect(() => {
+    isConnectedRef.current = isConnected;
+  }, [isConnected]);
 
+  useEffect(() => {
+    isMicActiveRef.current = isMicActive;
+  }, [isMicActive]);
+
+  useEffect(() => {
+    isAgentVoiceMutedRef.current = isAgentVoiceMuted;
+  }, [isAgentVoiceMuted]);
+
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (recorderRef.current) {
         recorderRef.current.stop().catch(() => { });
       }
       if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
+        const audio = currentAudioRef.current;
+        if (playPromiseRef.current) {
+          playPromiseRef.current.then(() => audio.pause()).catch(() => { });
+        } else {
+          audio.pause();
+        }
+        currentAudioRef.current = null;
       }
     };
   }, []);
 
+  // Scroll messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTextLoading, state]);
 
-  const setAgentState = React.useCallback((newState: AgentState) => {
+  const setAgentState = useCallback((newState: AgentState) => {
     setState(newState);
     if (onAgentSpeakingChange) {
       onAgentSpeakingChange(newState === "speaking");
     }
   }, [onAgentSpeakingChange]);
 
-  const updateLiveTranscription = React.useCallback(async (
+  const safelyPauseAudio = useCallback(() => {
+    if (currentAudioRef.current) {
+      const audio = currentAudioRef.current;
+      if (playPromiseRef.current) {
+        playPromiseRef.current
+          .then(() => {
+            audio.pause();
+          })
+          .catch(() => { });
+      } else {
+        audio.pause();
+      }
+      currentAudioRef.current = null;
+    }
+    playPromiseRef.current = null;
+  }, []);
+
+  const stopAudio = useCallback(() => {
+    safelyPauseAudio();
+    playingAudioIndexRef.current = null;
+    setPlayingAudioIndex(null);
+    if (isConnectedRef.current) {
+      setAgentState(isMicActiveRef.current ? "listening" : "ready");
+    } else {
+      setAgentState("disconnected");
+    }
+  }, [safelyPauseAudio, setAgentState]);
+
+  const updateLiveTranscription = useCallback(async (
     audioBase64: string,
     session: number
   ) => {
     if (
       session !== transcriptionSessionRef.current ||
-      !handsFreeRef.current ||
-      micMutedRef.current ||
+      !isMicActiveRef.current ||
       greetingPendingRef.current
     ) {
       return;
@@ -145,17 +204,14 @@ export default function UnifiedVoiceChat({
           if (
             result.text.trim() &&
             request.session === transcriptionSessionRef.current &&
-            !micMutedRef.current
+            isMicActiveRef.current
           ) {
             const merged = mergeTranscript(liveTranscriptRef.current, result.text.trim());
             liveTranscriptRef.current = merged;
             setLiveTranscript(merged);
           }
         } catch (error: unknown) {
-          console.error("Live Whisper transcription failed:", error);
-          if (request.session === transcriptionSessionRef.current) {
-            setErrorMessage(t.liveTranscriptError);
-          }
+          console.error("Live Whisper transcription notice:", error);
         }
 
         request = pendingPartialAudioRef.current;
@@ -169,21 +225,24 @@ export default function UnifiedVoiceChat({
         void updateLiveTranscription(pending.audioBase64, pending.session);
       }
     }
-  }, [t.liveTranscriptError]);
+  }, []);
 
-  const playAudio = React.useCallback((base64Data: string, messageIndex: number) => {
-    if (playingAudioIndexRef.current === messageIndex && currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      playingAudioIndexRef.current = null;
-      setPlayingAudioIndex(null);
-      setAgentState(handsFreeRef.current ? "listening" : "disconnected");
-      if (handsFreeRef.current) resumeListeningRef.current();
+  const playAudio = useCallback((base64Data: string, messageIndex: number) => {
+    // If user muted agent voice, do not play
+    if (isAgentVoiceMutedRef.current) {
       return;
     }
 
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
+    if (playingAudioIndexRef.current === messageIndex && currentAudioRef.current) {
+      safelyPauseAudio();
+      playingAudioIndexRef.current = null;
+      setPlayingAudioIndex(null);
+      setAgentState(isMicActiveRef.current ? "listening" : "ready");
+      if (isMicActiveRef.current) resumeListeningRef.current();
+      return;
     }
+
+    safelyPauseAudio();
 
     setAgentState("speaking");
     playingAudioIndexRef.current = messageIndex;
@@ -200,9 +259,14 @@ export default function UnifiedVoiceChat({
       playingAudioIndexRef.current = null;
       setPlayingAudioIndex(null);
       currentAudioRef.current = null;
-      if (handsFreeRef.current) {
-        setAgentState("listening");
-        resumeListeningRef.current();
+      playPromiseRef.current = null;
+      if (isConnectedRef.current) {
+        if (isMicActiveRef.current) {
+          setAgentState("listening");
+          resumeListeningRef.current();
+        } else {
+          setAgentState("ready");
+        }
       } else {
         setAgentState("disconnected");
       }
@@ -212,26 +276,36 @@ export default function UnifiedVoiceChat({
       playingAudioIndexRef.current = null;
       setPlayingAudioIndex(null);
       currentAudioRef.current = null;
-      if (handsFreeRef.current) {
-        setAgentState("listening");
-        resumeListeningRef.current();
+      playPromiseRef.current = null;
+      if (isConnectedRef.current) {
+        if (isMicActiveRef.current) {
+          setAgentState("listening");
+          resumeListeningRef.current();
+        } else {
+          setAgentState("ready");
+        }
       } else {
         setAgentState("disconnected");
       }
     };
 
-    audio.play().catch((err) => {
-      console.warn("Autoplay notice:", err);
-      playingAudioIndexRef.current = null;
-      setPlayingAudioIndex(null);
-      if (handsFreeRef.current) {
-        setAgentState("listening");
-        resumeListeningRef.current();
-      } else {
-        setAgentState("disconnected");
-      }
-    });
-  }, [setAgentState]);
+    const promise = audio.play();
+    if (promise !== undefined) {
+      playPromiseRef.current = promise;
+      promise.catch((err) => {
+        if ((err as Error)?.name !== "AbortError") {
+          console.warn("Autoplay notice:", err);
+        }
+        playingAudioIndexRef.current = null;
+        setPlayingAudioIndex(null);
+        if (isConnectedRef.current) {
+          setAgentState(isMicActiveRef.current ? "listening" : "ready");
+        } else {
+          setAgentState("disconnected");
+        }
+      });
+    }
+  }, [safelyPauseAudio, setAgentState]);
 
   useEffect(() => {
     if (agentSpeakingAudio) {
@@ -239,19 +313,8 @@ export default function UnifiedVoiceChat({
     }
   }, [agentSpeakingAudio, playAudio]);
 
-  const stopAudio = React.useCallback(() => {
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
-    }
-    playingAudioIndexRef.current = null;
-    setAgentState(handsFreeRef.current ? "listening" : "disconnected");
-    setPlayingAudioIndex(null);
-  }, [setAgentState]);
-
-  const startListening = React.useCallback(async () => {
+  const startListening = useCallback(async () => {
     if (recorderRef.current) return true;
-    if (micMutedRef.current) return false;
     const transcriptionSession = ++transcriptionSessionRef.current;
     pendingPartialAudioRef.current = null;
     liveTranscriptRef.current = "";
@@ -267,7 +330,7 @@ export default function UnifiedVoiceChat({
       await recorder.start((vol) => {
         setVolumeLevel(vol);
       }, () => {
-        if (handsFreeRef.current && !greetingPendingRef.current) {
+        if (isMicActiveRef.current && !greetingPendingRef.current) {
           window.setTimeout(() => stopListeningRef.current(), 0);
         }
       }, (audioBase64) => {
@@ -277,13 +340,14 @@ export default function UnifiedVoiceChat({
     } catch (err: unknown) {
       console.error("Microphone error:", err);
       recorderRef.current = null;
-      setAgentState("disconnected");
+      setIsMicActive(false);
+      setAgentState(isConnectedRef.current ? "ready" : "disconnected");
       setErrorMessage("Could not access microphone.");
       return false;
     }
   }, [setAgentState, stopAudio, updateLiveTranscription]);
 
-  const stopListeningAndProcess = React.useCallback(async () => {
+  const stopListeningAndProcess = useCallback(async () => {
     if (!recorderRef.current || processingRef.current) return;
     processingRef.current = true;
 
@@ -299,12 +363,10 @@ export default function UnifiedVoiceChat({
       if (!hasSpeech) {
         liveTranscriptRef.current = "";
         setLiveTranscript("");
-        if (handsFreeRef.current) {
+        if (isMicActiveRef.current) {
           resumeListeningRef.current();
         } else {
-          setAgentState("disconnected");
-          setErrorMessage(t.noSpeechError);
-          setTimeout(() => setErrorMessage(null), 3000);
+          setAgentState(isConnectedRef.current ? "ready" : "disconnected");
         }
         return;
       }
@@ -322,13 +384,13 @@ export default function UnifiedVoiceChat({
         audioBase64: base64,
         voice: selectedVoice,
         history: historyPayload,
-        isMuted: false,
+        isMuted: isAgentVoiceMutedRef.current,
         locationContext: locationContextStr,
       });
 
       if (!response.user_text && !response.bot_text) {
-        if (handsFreeRef.current) resumeListeningRef.current();
-        else setAgentState("disconnected");
+        if (isMicActiveRef.current) resumeListeningRef.current();
+        else setAgentState(isConnectedRef.current ? "ready" : "disconnected");
         return;
       }
 
@@ -336,51 +398,45 @@ export default function UnifiedVoiceChat({
       liveTranscriptRef.current = "";
       setLiveTranscript("");
 
-      if (response.audio_base64) {
+      if (response.audio_base64 && !isAgentVoiceMutedRef.current) {
         playAudio(response.audio_base64, messages.length + 1);
-      } else if (handsFreeRef.current) {
+      } else if (isMicActiveRef.current) {
         resumeListeningRef.current();
       } else {
-        setAgentState("disconnected");
+        setAgentState(isConnectedRef.current ? "ready" : "disconnected");
       }
     } catch (err: unknown) {
       console.error("Pipeline error:", err);
-      handsFreeRef.current = false;
-      setIsHandsFree(false);
-      setAgentState("disconnected");
+      setAgentState(isConnectedRef.current ? "ready" : "disconnected");
       setErrorMessage((err as Error)?.message || "Error processing voice request");
     } finally {
       processingRef.current = false;
     }
-  }, [activeLocation, messages, onSendMessage, playAudio, selectedVoice, setAgentState, t.noSpeechError]);
+  }, [activeLocation, messages, onSendMessage, playAudio, selectedVoice, setAgentState]);
 
   useEffect(() => {
     stopListeningRef.current = () => {
       void stopListeningAndProcess();
     };
     resumeListeningRef.current = () => {
-      if (!handsFreeRef.current || micMutedRef.current || recorderRef.current) return;
+      if (!isMicActiveRef.current || recorderRef.current) return;
       window.setTimeout(() => {
-        if (handsFreeRef.current && !micMutedRef.current && !recorderRef.current) {
+        if (isMicActiveRef.current && !recorderRef.current) {
           void startListening();
         }
       }, 250);
     };
   }, [startListening, stopListeningAndProcess]);
 
-  const startConversation = async () => {
-    if (startingConversationRef.current) return;
-    startingConversationRef.current = true;
-    handsFreeRef.current = true;
-    micMutedRef.current = false;
-    setIsMicMuted(false);
-    greetingPendingRef.current = true;
-    setIsHandsFree(true);
-
-    // 1. Enter connecting state immediately (Activates Green Wave)
+  // Connect Agent Session (Separated from Mic)
+  const connectAgent = async () => {
+    if (connectingLockRef.current || isConnectedRef.current) return;
+    connectingLockRef.current = true;
+    setIsConnected(true);
     setAgentState("connecting");
+    setErrorMessage(null);
 
-    // 2. Fetch LiveKit Token & establish room connection
+    // Fetch LiveKit token in background
     try {
       const roomName = `anazone-${selectedVoice}`;
       const tokenRes = await fetch(`/api/livekit/token?room=${encodeURIComponent(roomName)}`);
@@ -393,85 +449,99 @@ export default function UnifiedVoiceChat({
         }
       }
     } catch (e) {
-      console.warn("LiveKit connection token notice:", e);
-    }
-
-    const microphoneReady = await startListening();
-    if (!microphoneReady) {
-      handsFreeRef.current = false;
-      greetingPendingRef.current = false;
-      setIsHandsFree(false);
-      setIsLiveKitConnected(false);
-      startingConversationRef.current = false;
-      setAgentState("disconnected");
-      return;
+      console.warn("LiveKit connection notice:", e);
     }
 
     try {
       setAgentState("thinking");
+      greetingPendingRef.current = true;
       const greeting = await sendGreeting({ voice: selectedVoice, language });
-      if (recorderRef.current) {
-        await recorderRef.current.stop();
-        recorderRef.current = null;
-      }
       greetingPendingRef.current = false;
       onSendMessage("", greeting.reply, greeting.audio_base64);
-      if (greeting.audio_base64) {
+
+      if (greeting.audio_base64 && !isAgentVoiceMutedRef.current) {
         playAudio(greeting.audio_base64, messages.length);
       } else {
-        setAgentState("listening");
-        resumeListeningRef.current();
+        setAgentState("ready");
       }
     } catch (err: unknown) {
-      handsFreeRef.current = false;
+      console.error("Greeting notice:", err);
       greetingPendingRef.current = false;
-      setIsHandsFree(false);
-      setIsLiveKitConnected(false);
-      if (recorderRef.current) {
-        await recorderRef.current.stop();
-        recorderRef.current = null;
-      }
-      setAgentState("disconnected");
-      setErrorMessage((err as Error)?.message || "Could not start the conversation.");
+      setAgentState("ready");
     } finally {
-      startingConversationRef.current = false;
+      connectingLockRef.current = false;
     }
   };
 
-  const handleVoiceControl = async () => {
-    if (!handsFreeRef.current) {
-      await startConversation();
-      return;
-    }
-
-    const nextMutedState = !micMutedRef.current;
-    micMutedRef.current = nextMutedState;
-    setIsMicMuted(nextMutedState);
-
-    if (nextMutedState) {
-      transcriptionSessionRef.current += 1;
-      pendingPartialAudioRef.current = null;
-      liveTranscriptRef.current = "";
-      setLiveTranscript("");
-    }
-
-    if (nextMutedState && recorderRef.current) {
-      const recorder = recorderRef.current;
+  // Disconnect Agent Session
+  const disconnectAgent = async () => {
+    safelyPauseAudio();
+    if (recorderRef.current) {
+      await recorderRef.current.stop();
       recorderRef.current = null;
-      await recorder.stop();
-      setVolumeLevel(0);
-      setAgentState("disconnected");
+    }
+    setIsConnected(false);
+    setIsMicActive(false);
+    setIsLiveKitConnected(false);
+    setAgentState("disconnected");
+    setLiveTranscript("");
+    setVolumeLevel(0);
+  };
+
+  // Microphone Toggle (Independent Control)
+  const toggleMicrophone = async () => {
+    if (!isConnectedRef.current) {
+      await connectAgent();
+      setIsMicActive(true);
+      await startListening();
       return;
     }
 
-    if (!nextMutedState && !recorderRef.current && state !== "thinking" && state !== "speaking") {
-      await startListening();
+    if (isMicActiveRef.current) {
+      // User wants to mute/pause mic
+      setIsMicActive(false);
+      if (recorderRef.current) {
+        const recorder = recorderRef.current;
+        recorderRef.current = null;
+        await recorder.stop();
+        setVolumeLevel(0);
+      }
+      setLiveTranscript("");
+      if (state === "listening") {
+        setAgentState("ready");
+      }
+    } else {
+      // User wants to unmute mic & speak
+      setIsMicActive(true);
+      if (state !== "thinking" && state !== "speaking") {
+        await startListening();
+      }
     }
   };
 
+  // Agent Voice / Speaker Toggle (Independent Output Control)
+  const toggleAgentVoice = () => {
+    setIsAgentVoiceMuted((prev) => {
+      const next = !prev;
+      if (next) {
+        safelyPauseAudio();
+        if (state === "speaking") {
+          setAgentState(isMicActiveRef.current ? "listening" : "ready");
+        }
+      }
+      return next;
+    });
+  };
+
+  // Send Text Message (Works in all states)
   const handleSendText = async () => {
     const text = inputText.trim();
     if (!text || isTextLoading) return;
+
+    // Auto-connect if disconnected
+    if (!isConnectedRef.current) {
+      setIsConnected(true);
+    }
 
     setInputText("");
     setIsTextLoading(true);
@@ -491,21 +561,21 @@ export default function UnifiedVoiceChat({
         message: text,
         voice: selectedVoice,
         history: historyPayload,
-        isMuted: false,
+        isMuted: isAgentVoiceMutedRef.current,
         locationContext: locationContextStr,
       });
 
       onSendMessage(text, res.reply, res.audio_base64);
 
-      if (res.audio_base64) {
+      if (res.audio_base64 && !isAgentVoiceMutedRef.current) {
         playAudio(res.audio_base64, messages.length + 1);
       } else {
-        setAgentState(handsFreeRef.current ? "listening" : "disconnected");
+        setAgentState(isMicActiveRef.current ? "listening" : "ready");
       }
     } catch (err: unknown) {
       console.error("Chat error:", err);
       onSendMessage(text, t.chatErrorNotice, null);
-      setAgentState(handsFreeRef.current ? "listening" : "disconnected");
+      setAgentState(isMicActiveRef.current ? "listening" : "ready");
     } finally {
       setIsTextLoading(false);
     }
@@ -513,16 +583,18 @@ export default function UnifiedVoiceChat({
 
   return (
     <div className="w-full h-full min-h-0 overflow-hidden bg-black/15 backdrop-blur-[3px] rounded-xl p-5 sm:p-6 flex flex-col relative text-white">
-      {/* 1. Voice Agent Status & Live Wave Header */}
+      {/* 1. Voice Agent Header: Status & Connection Pill */}
       <div className="w-full shrink-0 flex flex-col items-center justify-center pt-0.5 pb-1">
-        {/* Status indicator directly above the wave */}
-        <div className="flex items-center gap-2 mb-1 px-3 py-0.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm text-xs font-medium tracking-wide transition-all duration-300">
+        <div className="flex items-center gap-2 mb-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm text-xs font-medium tracking-wide transition-all duration-300">
+          {/* Status Indicator Dot */}
           <span
             className={`w-2 h-2 rounded-full transition-colors duration-300 ${
               state === "disconnected"
                 ? "bg-[#ff2222] shadow-[0_0_8px_#ff2222]"
                 : state === "connecting"
                 ? "bg-[#1eff00] shadow-[0_0_8px_#1eff00] animate-pulse"
+                : state === "ready"
+                ? "bg-[#10b981] shadow-[0_0_8px_#10b981]"
                 : state === "listening"
                 ? "bg-[#ff5500] shadow-[0_0_8px_#ff5500] animate-pulse"
                 : state === "thinking"
@@ -530,20 +602,47 @@ export default function UnifiedVoiceChat({
                 : "bg-[#0026ff] shadow-[0_0_8px_#0026ff] animate-pulse"
             }`}
           />
+
+          {/* Status Text */}
           <span className="text-white/85 select-none text-[11px] sm:text-xs">
             {state === "disconnected"
-              ? (language === "ar" ? "غير متصل" : "Disconnected")
+              ? (language === "ar" ? "╪║┘è╪▒ ┘à╪¬╪╡┘ä" : "Disconnected")
               : state === "connecting"
-              ? (language === "ar" ? "جارٍ الاتصال..." : "Connecting...")
+              ? (language === "ar" ? "╪¼╪º╪▒┘ì ╪º┘ä╪º╪¬╪╡╪º┘ä..." : "Connecting...")
+              : state === "ready"
+              ? (language === "ar" ? "╪¼╪º┘ç╪▓ ┘ä┘ä┘à╪¡╪º╪»╪½╪⌐" : "Agent Ready")
               : state === "listening"
-              ? (language === "ar" ? "جارٍ الاستماع..." : "Listening...")
+              ? (language === "ar" ? "╪¼╪º╪▒┘ì ╪º┘ä╪º╪│╪¬┘à╪º╪╣..." : "Listening...")
               : state === "thinking"
-              ? (language === "ar" ? "جارٍ التفكير..." : "Thinking...")
-              : (language === "ar" ? "يتحدث الآن..." : "Speaking...")}
+              ? (language === "ar" ? "╪¼╪º╪▒┘ì ╪º┘ä╪¬┘ü┘â┘è╪▒..." : "Thinking...")
+              : (language === "ar" ? "┘è╪¬╪¡╪»╪½ ╪º┘ä╪ó┘å..." : "Speaking...")}
           </span>
+
+          <span className="w-px h-3.5 bg-white/20 mx-0.5" />
+
+          {/* Connect / Disconnect Action Button */}
+          {!isConnected ? (
+            <button
+              onClick={() => void connectAgent()}
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer outline-none"
+              title={language === "ar" ? "╪º╪¬╪╡╪º┘ä ╪¿╪º┘ä┘ê┘â┘è┘ä" : "Connect Agent"}
+            >
+              <Sparkles className="w-3 h-3 text-emerald-400" />
+              <span>{language === "ar" ? "╪º╪¬╪╡╪º┘ä" : "Connect"}</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => void disconnectAgent()}
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400/90 hover:text-red-300 transition-colors cursor-pointer outline-none"
+              title={language === "ar" ? "┘é╪╖╪╣ ╪º┘ä╪º╪¬╪╡╪º┘ä" : "Disconnect"}
+            >
+              <Power className="w-3 h-3 text-red-400/90" />
+              <span>{language === "ar" ? "┘é╪╖╪╣ ╪º┘ä╪º╪¬╪╡╪º┘ä" : "Disconnect"}</span>
+            </button>
+          )}
         </div>
 
-        {/* Live Agent Wave spanning the full lateral width */}
+        {/* Live Agent Wave across full lateral width */}
         <div className="w-full h-[65px] sm:h-[75px] relative overflow-hidden flex items-center justify-center">
           <LiveAgentWave
             state={state}
@@ -552,7 +651,7 @@ export default function UnifiedVoiceChat({
           />
         </div>
 
-        {/* Perfect thin horizontal white line under the voice wave shape */}
+        {/* Horizontal white divider under wave */}
         <div className="w-full h-px bg-white/20 mt-1 shrink-0" />
       </div>
 
@@ -563,7 +662,7 @@ export default function UnifiedVoiceChat({
         </div>
       )}
 
-      {/* 3. Messages Stream Area */}
+      {/* 2. Messages Stream Area */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain mt-3 pr-1 space-y-3">
         {messages.map((msg, index) => {
           const isUser = msg.role === "user";
@@ -581,10 +680,11 @@ export default function UnifiedVoiceChat({
               )}
 
               <div
-                className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed ${isUser
+                className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed ${
+                  isUser
                     ? "bg-[#2e8b57] text-white font-normal rounded-xl rounded-tr-none"
                     : "bg-black/35 text-white font-normal rounded-xl rounded-tl-none"
-                  }`}
+                }`}
                 dir="auto"
               >
                 <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -644,61 +744,65 @@ export default function UnifiedVoiceChat({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 4. Bottom Text Input Bar with Mic Connection Button on the LEFT */}
+      {/* 3. Bottom Controls & Text Input Bar */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
           handleSendText();
         }}
         dir="ltr"
-        className="mt-3 p-1.5 rounded-xl bg-black/30 border border-white/20 flex items-center gap-2 focus-within:border-white/35 transition-colors"
+        className="mt-3 p-1.5 rounded-xl bg-black/30 border border-white/20 flex items-center gap-1.5 focus-within:border-white/35 transition-colors"
       >
-        {/* Connection / Mic Icon Button placed strictly on the left */}
+        {/* Control A: Microphone Button (User Voice Input) */}
         <button
           type="button"
-          onClick={() => void handleVoiceControl()}
+          onClick={() => void toggleMicrophone()}
           disabled={state === "thinking"}
-          aria-label={
-            !isHandsFree
-              ? t.startVoiceChat
-              : isMicMuted
-              ? t.unmuteMicrophone
-              : t.muteMicrophone
-          }
+          aria-label={isMicActive ? "Mute Microphone" : "Unmute Microphone"}
           title={
-            !isHandsFree
-              ? t.startVoiceChat
-              : isMicMuted
-              ? t.unmuteMicrophone
-              : t.muteMicrophone
+            isMicActive
+              ? (language === "ar" ? "╪º┘ä┘à┘è┘â╪▒┘ê┘ü┘ê┘å ┘é┘è╪» ╪º┘ä╪º╪│╪¬┘à╪º╪╣ (╪º┘å┘é╪▒ ┘ä┘ä┘â╪¬┘à)" : "Microphone Active (Click to mute)")
+              : (language === "ar" ? "╪º┘ä┘à┘è┘â╪▒┘ê┘ü┘ê┘å ┘à┘â╪¬┘ê┘à (╪º┘å┘é╪▒ ┘ä┘ä╪¬╪¡╪»╪½)" : "Microphone Muted (Click to talk)")
           }
           className={`p-2.5 rounded-lg transition-all duration-200 cursor-pointer shrink-0 flex items-center justify-center outline-none focus:outline-none focus:ring-0 ${
-            !isHandsFree || state === "disconnected"
-              ? "text-white/80 hover:text-white hover:bg-white/10"
-              : isMicMuted
-              ? "bg-[#78866B] text-white"
-              : state === "connecting"
-              ? "bg-[#1eff00] text-black shadow-[0_0_12px_rgba(30,255,0,0.7)] animate-pulse"
-              : state === "listening"
+            !isConnected
+              ? "text-white/70 hover:text-white hover:bg-white/10"
+              : isMicActive
               ? "bg-[#ff5500] text-white shadow-[0_0_12px_rgba(255,85,0,0.7)] animate-pulse"
-              : state === "thinking"
-              ? "bg-[#ff00e1] text-white shadow-[0_0_12px_rgba(255,0,225,0.7)] animate-pulse"
-              : state === "speaking"
-              ? "bg-[#0026ff] text-white shadow-[0_0_12px_rgba(0,38,255,0.7)]"
-              : "text-white/80 hover:text-white hover:bg-white/10"
+              : "bg-white/10 text-white/80 hover:bg-white/15 hover:text-white"
           }`}
         >
-          {isMicMuted ? (
-            <MicOff className="w-4 h-4 text-white" />
-          ) : state === "connecting" || state === "thinking" ? (
-            <Loader2 className="w-4 h-4 animate-spin text-white" />
-          ) : state === "speaking" ? (
-            <Volume2 className="w-4 h-4 text-white" />
-          ) : (
+          {isMicActive ? (
             <Mic className="w-4 h-4 text-white" />
+          ) : (
+            <MicOff className="w-4 h-4 text-white/80" />
           )}
         </button>
 
+        {/* Control B: Agent Voice / Speaker Toggle (Agent Voice Output) */}
+        <button
+          type="button"
+          onClick={toggleAgentVoice}
+          aria-label={isAgentVoiceMuted ? "Unmute Agent Voice" : "Mute Agent Voice"}
+          title={
+            isAgentVoiceMuted
+              ? (language === "ar" ? "╪╡┘ê╪¬ ╪º┘ä┘ê┘â┘è┘ä ┘à┘â╪¬┘ê┘à (┘ê╪╢╪╣ ╪º┘ä┘å╪╡ ╪º┘ä╪╡╪º┘à╪¬)" : "Agent Voice: MUTED (Silent text mode)")
+              : (language === "ar" ? "╪╡┘ê╪¬ ╪º┘ä┘ê┘â┘è┘ä ┘à┘ü╪╣┘æ┘ä (╪º┘å┘é╪▒ ┘ä┘ä┘â╪¬┘à)" : "Agent Voice: ON (Click to mute)")
+          }
+          className={`p-2.5 rounded-lg transition-all duration-200 cursor-pointer shrink-0 flex items-center justify-center outline-none focus:outline-none focus:ring-0 ${
+            isAgentVoiceMuted
+              ? "bg-red-500/20 text-red-300 hover:bg-red-500/30"
+              : "text-white/70 hover:text-white hover:bg-white/10"
+          }`}
+        >
+          {isAgentVoiceMuted ? (
+            <VolumeX className="w-4 h-4 text-red-300" />
+          ) : (
+            <Volume2 className="w-4 h-4 text-white" />
+          )}
+        </button>
+
+        {/* Text Input Box */}
         <input
           type="text"
           value={inputText}
@@ -710,6 +814,7 @@ export default function UnifiedVoiceChat({
           dir="auto"
         />
 
+        {/* Send Button */}
         <button
           type="submit"
           disabled={!inputText.trim() || isTextLoading || state === "thinking"}

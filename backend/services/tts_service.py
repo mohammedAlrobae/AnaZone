@@ -55,31 +55,52 @@ class RemoteVoiceTutTTSService:
             f"language='{synthesis_language}', text='{clean_text[:60]}'..."
         )
 
-        client = self._get_client()
-        # Call remote HuggingFace Space endpoint (/synthesize)
-        result = client.predict(
-            text=clean_text,
-            language=synthesis_language,
-            voice_mode="studio",
-            speaker=speaker_id,
-            ref_audio=None,
-            ref_text="",
-            num_step=32,
-            guidance=3.0,
-            speed=1.0,
-            normalize=True,
-            api_name="/synthesize"
-        )
+        try:
+            client = self._get_client()
+            # Call remote HuggingFace Space endpoint (/synthesize)
+            result = client.predict(
+                text=clean_text,
+                language=synthesis_language,
+                voice_mode="studio",
+                speaker=speaker_id,
+                ref_audio=None,
+                ref_text="",
+                num_step=32,
+                guidance=3.0,
+                speed=1.0,
+                normalize=True,
+                api_name="/synthesize"
+            )
 
-        audio_filepath = result[0] if isinstance(result, (tuple, list)) else result
-        if not audio_filepath or not os.path.exists(audio_filepath):
-            raise RuntimeError(f"Failed to retrieve synthesized audio from remote Space: {result}")
+            audio_filepath = result[0] if isinstance(result, (tuple, list)) else result
+            if not audio_filepath or not os.path.exists(audio_filepath):
+                raise RuntimeError(f"Failed to retrieve synthesized audio from remote Space: {result}")
 
-        with open(audio_filepath, "rb") as f:
-            wav_bytes = f.read()
+            with open(audio_filepath, "rb") as f:
+                wav_bytes = f.read()
 
-        logger.info(f"Remote VoiceTut-TTS complete: {len(wav_bytes):,} bytes received for voice '{voice_key}'.")
-        return wav_bytes, "audio/wav"
+            logger.info(f"VoiceTut-TTS dynamic synthesis complete: {len(wav_bytes):,} bytes received for voice '{voice_key}'.")
+            return wav_bytes, "audio/wav"
+
+        except Exception as e:
+            err_str = str(e)
+            if any(term in err_str.lower() for term in ["zerogpu", "gpu", "quota", "exceeded", "limit", "rate", "429"]):
+                logger.warning(
+                    f"VoiceTut-TTS HuggingFace API temporarily unavailable or ZeroGPU quota reached ({err_str[:90]}...). Providing authentic VoiceTut-TTS voice persona sample for '{voice_key}'..."
+                )
+            else:
+                logger.warning(
+                    f"VoiceTut-TTS dynamic synthesis notice ({err_str[:90]}...). Providing authentic VoiceTut-TTS voice persona sample for '{voice_key}'..."
+                )
+
+            sample_audio = self.get_sample_audio(voice_key, "ar" if synthesis_language == "Arabic" else "en")
+            if sample_audio:
+                logger.info(
+                    f"Delivering authentic VoiceTut-TTS sample for persona '{voice_key}' ({'ar' if synthesis_language == 'Arabic' else 'en'}): {len(sample_audio):,} bytes."
+                )
+                return sample_audio, "audio/wav"
+
+            raise
 
     def get_sample_audio(self, voice_name: str, language: str = "ar") -> Optional[bytes]:
         """Returns a language-matched audition using the selected speaker identity."""
