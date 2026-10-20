@@ -21,7 +21,8 @@ import {
 } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { LocationSelected } from "./WorldMap";
-import DynamicVoiceWave from "./DynamicVoiceWave";
+import { LiveAgentWave } from "@/components/agents-ui/LiveAgentWave";
+import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 
 interface UnifiedVoiceChatProps {
   selectedVoice: string;
@@ -36,7 +37,7 @@ interface UnifiedVoiceChatProps {
   onAgentSpeakingChange?: (speaking: boolean) => void;
 }
 
-type AgentState = "idle" | "listening" | "processing" | "speaking" | "error";
+type AgentState = "idle" | "connecting" | "listening" | "thinking" | "processing" | "speaking" | "error";
 
 function mergeTranscript(previous: string, next: string): string {
   const previousWords = previous.trim().split(/\s+/).filter(Boolean);
@@ -73,6 +74,9 @@ export default function UnifiedVoiceChat({
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
   const [playingAudioIndex, setPlayingAudioIndex] = useState<number | null>(null);
+  const [liveKitToken, setLiveKitToken] = useState<string>("");
+  const [liveKitUrl, setLiveKitUrl] = useState<string>("");
+  const [isLiveKitConnected, setIsLiveKitConnected] = useState<boolean>(false);
 
   const recorderRef = useRef<WavRecorder | null>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -272,7 +276,7 @@ export default function UnifiedVoiceChat({
     processingRef.current = true;
 
     try {
-      setAgentState("processing");
+      setAgentState("thinking");
       setVolumeLevel(0);
       transcriptionSessionRef.current += 1;
       pendingPartialAudioRef.current = null;
@@ -360,17 +364,39 @@ export default function UnifiedVoiceChat({
     setIsMicMuted(false);
     greetingPendingRef.current = true;
     setIsHandsFree(true);
+
+    // 1. Enter connecting state immediately (Activates Green Wave)
+    setAgentState("connecting");
+
+    // 2. Fetch LiveKit Token & establish room connection
+    try {
+      const roomName = `anazone-${selectedVoice}`;
+      const tokenRes = await fetch(`/api/livekit/token?room=${encodeURIComponent(roomName)}`);
+      if (tokenRes.ok) {
+        const tokenData = await tokenRes.json();
+        if (tokenData.token && tokenData.url) {
+          setLiveKitToken(tokenData.token);
+          setLiveKitUrl(tokenData.url);
+          setIsLiveKitConnected(true);
+        }
+      }
+    } catch (e) {
+      console.warn("LiveKit connection token notice:", e);
+    }
+
     const microphoneReady = await startListening();
     if (!microphoneReady) {
       handsFreeRef.current = false;
       greetingPendingRef.current = false;
       setIsHandsFree(false);
+      setIsLiveKitConnected(false);
       startingConversationRef.current = false;
+      setAgentState("idle");
       return;
     }
 
     try {
-      setAgentState("processing");
+      setAgentState("thinking");
       const greeting = await sendGreeting({ voice: selectedVoice, language });
       if (recorderRef.current) {
         await recorderRef.current.stop();
@@ -381,12 +407,14 @@ export default function UnifiedVoiceChat({
       if (greeting.audio_base64) {
         playAudio(greeting.audio_base64, messages.length);
       } else {
+        setAgentState("listening");
         resumeListeningRef.current();
       }
     } catch (err: unknown) {
       handsFreeRef.current = false;
       greetingPendingRef.current = false;
       setIsHandsFree(false);
+      setIsLiveKitConnected(false);
       if (recorderRef.current) {
         await recorderRef.current.stop();
         recorderRef.current = null;
@@ -469,12 +497,18 @@ export default function UnifiedVoiceChat({
 
   return (
     <div className="w-full h-full min-h-0 overflow-hidden bg-black/15 backdrop-blur-[3px] rounded-xl p-5 sm:p-6 flex flex-col relative text-white">
-      {/* 1. Voice Agent Live Wave Header (Pure wave with real dynamic movement) */}
-      <div className="w-full shrink-0">
-        <DynamicVoiceWave
-          state={state}
-          volumeLevel={volumeLevel}
-          isMicMuted={isMicMuted}
+      {/* 1. Voice Agent Live Wave Header (Exact 4 dynamic states with LiveAgentWave) */}
+      <div className="w-full shrink-0 h-[88px] flex items-center justify-center overflow-hidden relative">
+        <LiveAgentWave
+          state={
+            state === "processing"
+              ? "thinking"
+              : state === "idle" || state === "error"
+              ? "listening"
+              : state
+          }
+          size="xl"
+          className="mx-auto aspect-square size-auto h-full"
         />
       </div>
 
@@ -579,7 +613,7 @@ export default function UnifiedVoiceChat({
         <button
           type="button"
           onClick={() => void handleVoiceControl()}
-          disabled={state === "processing"}
+          disabled={state === "thinking"}
           aria-label={
             !isHandsFree
               ? t.startVoiceChat
@@ -599,16 +633,20 @@ export default function UnifiedVoiceChat({
               ? "text-white/80 hover:text-white hover:bg-white/10"
               : isMicMuted
               ? "bg-[#78866B] text-white"
+              : state === "connecting"
+              ? "bg-[#1eff00] text-black shadow-[0_0_12px_rgba(30,255,0,0.7)] animate-pulse"
               : state === "listening"
-              ? "bg-[#2E8B57] text-white shadow-[0_0_12px_rgba(46,139,87,0.7)] animate-pulse"
+              ? "bg-[#ff5500] text-white shadow-[0_0_12px_rgba(255,85,0,0.7)] animate-pulse"
+              : state === "thinking" || state === "processing"
+              ? "bg-[#ff00e1] text-white shadow-[0_0_12px_rgba(255,0,225,0.7)] animate-pulse"
               : state === "speaking"
-              ? "bg-[#2E8B57] text-white shadow-[0_0_10px_rgba(46,139,87,0.5)]"
+              ? "bg-[#0026ff] text-white shadow-[0_0_12px_rgba(0,38,255,0.7)]"
               : "bg-[#78866B] text-white"
           }`}
         >
           {isMicMuted ? (
             <MicOff className="w-4 h-4 text-white" />
-          ) : state === "processing" ? (
+          ) : state === "connecting" || state === "thinking" || state === "processing" ? (
             <Loader2 className="w-4 h-4 animate-spin text-white" />
           ) : state === "speaking" ? (
             <Volume2 className="w-4 h-4 text-white" />
@@ -636,6 +674,26 @@ export default function UnifiedVoiceChat({
           <Send className="w-4 h-4 text-white" />
         </button>
       </form>
+
+      {/* Hidden LiveKit WebRTC Session Manager for Cloud Audio Transport */}
+      {liveKitToken && (
+        <LiveKitRoom
+          token={liveKitToken}
+          serverUrl={liveKitUrl}
+          connect={isLiveKitConnected}
+          audio={true}
+          video={false}
+          onConnected={() => {
+            console.log("LiveKit Cloud WebRTC connected successfully");
+          }}
+          onDisconnected={() => {
+            console.log("LiveKit Cloud WebRTC disconnected");
+            setIsLiveKitConnected(false);
+          }}
+        >
+          <RoomAudioRenderer />
+        </LiveKitRoom>
+      )}
     </div>
   );
 }
