@@ -93,7 +93,10 @@ class RemoteVoiceTutTTSService:
         else:
             sample_filename = profile["sample_filename"]
 
-        sample_path = ROOT_DIR / "3_VoiceTut_TTS" / sample_filename
+        # Check backend/voice_samples first, then fallback to 3_VoiceTut_TTS
+        sample_path = ROOT_DIR / "backend" / "voice_samples" / sample_filename
+        if not sample_path.is_file():
+            sample_path = ROOT_DIR / "3_VoiceTut_TTS" / sample_filename
         if not sample_path.is_file():
             return None
 

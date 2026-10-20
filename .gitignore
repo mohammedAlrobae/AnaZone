@@ -62,6 +62,7 @@ model_weights/
 *.tflite
 3_VoiceTut_TTS/model_weights/
 3_VoiceTut_TTS/*.wav
+!backend/voice_samples/*.wav
 *.zip
 
 # Frontend temporary mockup images (keep public/ intact)
