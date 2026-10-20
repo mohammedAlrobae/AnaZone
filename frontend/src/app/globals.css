@@ -88,15 +88,20 @@
   display: none !important;
 }
 
-/* Keyboard accessibility: outline only on :focus-visible, mouse clicks show no ring */
-*:focus:not(:focus-visible) {
+/* Keyboard accessibility: outline only on interactive focusable elements, never on text inputs */
+button:focus-visible, a:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 2px;
+}
+
+input, textarea, select {
   outline: none !important;
   box-shadow: none !important;
 }
 
-*:focus-visible {
-  outline: 2px solid #ffffff !important;
-  outline-offset: 2px !important;
+input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -497,19 +497,48 @@ export default function UnifiedVoiceChat({
 
   return (
     <div className="w-full h-full min-h-0 overflow-hidden bg-black/15 backdrop-blur-[3px] rounded-xl p-5 sm:p-6 flex flex-col relative text-white">
-      {/* 1. Voice Agent Live Wave Header (Spanning full lateral width across chat box) */}
-      <div className="w-full shrink-0 h-[85px] sm:h-[95px] relative overflow-hidden flex items-center justify-center">
-        <LiveAgentWave
-          state={
-            state === "processing"
-              ? "thinking"
-              : state === "idle" || state === "error"
-              ? "listening"
-              : state
-          }
-          size="full"
-          className="w-full h-full"
-        />
+      {/* 1. Voice Agent Status & Live Wave Header */}
+      <div className="w-full shrink-0 flex flex-col items-center justify-center pt-0.5 pb-1">
+        {/* Status indicator directly above the wave */}
+        <div className="flex items-center gap-2 mb-1 px-3 py-0.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm text-xs font-medium tracking-wide transition-all duration-300">
+          <span
+            className={`w-2 h-2 rounded-full transition-colors duration-300 ${
+              state === "connecting"
+                ? "bg-[#1eff00] shadow-[0_0_8px_#1eff00] animate-pulse"
+                : state === "thinking" || state === "processing"
+                ? "bg-[#ff00e1] shadow-[0_0_8px_#ff00e1] animate-pulse"
+                : state === "speaking"
+                ? "bg-[#0026ff] shadow-[0_0_8px_#0026ff] animate-pulse"
+                : "bg-[#ff5500] shadow-[0_0_8px_#ff5500]"
+            }`}
+          />
+          <span className="text-white/85 select-none text-[11px] sm:text-xs">
+            {state === "connecting"
+              ? (language === "ar" ? "جارٍ الاتصال..." : "Connecting...")
+              : state === "thinking" || state === "processing"
+              ? (language === "ar" ? "جارٍ التفكير..." : "Thinking...")
+              : state === "speaking"
+              ? (language === "ar" ? "يتحدث الآن..." : "Speaking...")
+              : isHandsFree
+              ? (language === "ar" ? "جارٍ الاستماع..." : "Listening...")
+              : (language === "ar" ? "مستعد للمحادثة" : "Ready to talk")}
+          </span>
+        </div>
+
+        {/* Live Agent Wave spanning the full lateral width */}
+        <div className="w-full h-[65px] sm:h-[75px] relative overflow-hidden flex items-center justify-center">
+          <LiveAgentWave
+            state={
+              state === "processing"
+                ? "thinking"
+                : state === "idle" || state === "error"
+                ? "listening"
+                : state
+            }
+            size="full"
+            className="w-full h-full"
+          />
+        </div>
       </div>
 
       {/* Error notice */}
@@ -607,7 +636,7 @@ export default function UnifiedVoiceChat({
           handleSendText();
         }}
         dir="ltr"
-        className="mt-3 p-1.5 rounded-xl bg-black/30 border border-white/20 flex items-center gap-2"
+        className="mt-3 p-1.5 rounded-xl bg-black/30 border border-white/20 flex items-center gap-2 focus-within:border-white/35 transition-colors"
       >
         {/* Connection / Mic Icon Button placed strictly on the left */}
         <button
@@ -628,7 +657,7 @@ export default function UnifiedVoiceChat({
               ? t.unmuteMicrophone
               : t.muteMicrophone
           }
-          className={`p-2.5 rounded-lg transition-all duration-200 cursor-pointer shrink-0 flex items-center justify-center outline-none ${
+          className={`p-2.5 rounded-lg transition-all duration-200 cursor-pointer shrink-0 flex items-center justify-center outline-none focus:outline-none focus:ring-0 ${
             !isHandsFree
               ? "text-white/80 hover:text-white hover:bg-white/10"
               : isMicMuted
@@ -661,14 +690,15 @@ export default function UnifiedVoiceChat({
           onChange={(e) => setInputText(e.target.value)}
           placeholder={t.inputPlaceholder}
           disabled={isTextLoading || state === "processing"}
-          className="flex-1 bg-transparent text-white placeholder-white/60 px-3 py-2 text-sm font-normal outline-hidden"
+          className="flex-1 bg-transparent text-white placeholder-white/60 px-3 py-2 text-sm font-normal outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 border-none focus:border-none shadow-none"
+          style={{ outline: "none", boxShadow: "none" }}
           dir="auto"
         />
 
         <button
           type="submit"
           disabled={!inputText.trim() || isTextLoading || state === "processing"}
-          className="bg-[#2e8b57] hover:bg-[#257347] disabled:opacity-40 text-white p-2.5 rounded-lg cursor-pointer transition-colors shrink-0"
+          className="bg-[#2e8b57] hover:bg-[#257347] disabled:opacity-40 text-white p-2.5 rounded-lg cursor-pointer transition-colors shrink-0 outline-none focus:outline-none focus:ring-0"
           title="Send"
         >
           <Send className="w-4 h-4 text-white" />
