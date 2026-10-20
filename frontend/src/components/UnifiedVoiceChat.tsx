@@ -6,7 +6,6 @@ import {
   Square,
   Loader2,
   Send,
-  MapPin,
   Bot,
   User,
   Mic,
@@ -483,19 +482,6 @@ export default function UnifiedVoiceChat({
       {errorMessage && (
         <div className="mt-2 px-3 py-1.5 rounded-lg bg-[#8b3a3a] text-white text-xs font-semibold">
           {errorMessage}
-        </div>
-      )}
-
-      {/* Active Location Indicator */}
-      {activeLocation && (
-        <div className="mt-3 px-4 py-2 bg-black/30 rounded-lg flex items-center justify-between text-xs font-bold text-white">
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-white" />
-            <span>{activeLocation.name}</span>
-          </div>
-          <span className="font-mono text-[11px] text-white/80">
-            {activeLocation.lat.toFixed(2)}°, {activeLocation.lng.toFixed(2)}°
-          </span>
         </div>
       )}
 

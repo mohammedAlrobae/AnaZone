@@ -247,17 +247,6 @@ export default function WorldMap({
       <div className="relative flex-1 w-full min-h-0">
         <div ref={mapContainerRef} className="w-full h-full z-0 cursor-crosshair bg-[#78866B]" />
 
-        {/* Floating Exploration / Loading Pill */}
-        {(isReverseGeocoding || isExploring) && (
-          <div className="absolute top-3 left-3 z-10 flex items-center gap-2 text-xs font-medium text-white px-3 py-1 rounded-full bg-[#78866B]">
-            <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-            <span>
-              {isReverseGeocoding
-                ? language === "ar" ? "جارٍ تحديد المكان..." : "Locating..."
-                : language === "ar" ? "المساعد يتحدث..." : "Audio briefing..."}
-            </span>
-          </div>
-        )}
 
         {/* Selected Location Bar */}
         {selectedLocation && (
