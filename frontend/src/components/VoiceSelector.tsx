@@ -93,24 +93,18 @@ export default function VoiceSelector({
   const leftVoice = voices[prevIndex];
   const rightVoice = voices[nextIndex];
 
-  const handleSelect = (voiceId: string) => {
-    onSelectVoice(voiceId);
-  };
-
-  const toggleAudition = (voiceId: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-
-    // If already playing this voice, stop it
-    if (playingVoice === voiceId && audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-      setPlayingVoice(null);
-      return;
-    }
-
+  const stopAudition = () => {
     if (audioRef.current) {
       audioRef.current.pause();
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+      audioRef.current = null;
     }
+    setPlayingVoice(null);
+  };
+
+  const playVoiceAudition = (voiceId: string) => {
+    stopAudition();
 
     const sampleUrl = getVoiceSampleUrl(voiceId, language);
     const audio = new Audio(sampleUrl);
@@ -118,20 +112,56 @@ export default function VoiceSelector({
     setPlayingVoice(voiceId);
 
     audio.onended = () => {
-      setPlayingVoice(null);
-      audioRef.current = null;
+      if (audioRef.current === audio) {
+        setPlayingVoice(null);
+        audioRef.current = null;
+      }
     };
 
     audio.onerror = () => {
-      setPlayingVoice(null);
-      audioRef.current = null;
+      if (audioRef.current === audio) {
+        setPlayingVoice(null);
+        audioRef.current = null;
+      }
     };
 
     audio.play().catch((err) => {
       console.warn("Autoplay notice:", err);
-      setPlayingVoice(null);
-      audioRef.current = null;
+      if (audioRef.current === audio) {
+        setPlayingVoice(null);
+        audioRef.current = null;
+      }
     });
+  };
+
+  const handleSelect = (newVoiceId: string) => {
+    if (newVoiceId === selectedVoice) return;
+
+    // Check if previous persona was actively playing
+    const wasPlaying = Boolean(playingVoice || audioRef.current);
+
+    // Immediately stop any currently playing voice
+    stopAudition();
+
+    // Select the new voice
+    onSelectVoice(newVoiceId);
+
+    // If audio was playing, seamlessly start the new voice's audition immediately
+    if (wasPlaying) {
+      playVoiceAudition(newVoiceId);
+    }
+  };
+
+  const toggleAudition = (voiceId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+
+    // If already playing this voice, stop it
+    if (playingVoice === voiceId && audioRef.current) {
+      stopAudition();
+      return;
+    }
+
+    playVoiceAudition(voiceId);
   };
 
   const handlePrev = (e?: React.MouseEvent) => {
@@ -145,6 +175,32 @@ export default function VoiceSelector({
     const newVoice = voices[nextIndex].id;
     handleSelect(newVoice);
   };
+
+  // Keyboard navigation for Left / Right arrows
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement)?.isContentEditable
+      ) {
+        return;
+      }
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        const newVoice = isRtl ? voices[nextIndex].id : voices[prevIndex].id;
+        handleSelect(newVoice);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        const newVoice = isRtl ? voices[prevIndex].id : voices[nextIndex].id;
+        handleSelect(newVoice);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentIndex, prevIndex, nextIndex, playingVoice, isRtl]);
 
   const isCurrentPlaying = playingVoice === currentVoice.id;
 
