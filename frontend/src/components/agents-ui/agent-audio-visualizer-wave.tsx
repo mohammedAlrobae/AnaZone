@@ -62,23 +62,22 @@ vec3 hsv2rgb(vec3 c) {
   return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
-// Bell curve function for attenuation from center with rounded top
+// Bell curve function: keeps wave active across full lateral width,
+// smoothly anchoring to baseline only at extreme left and right ends.
 float bellCurve(float distanceFromCenter, float maxDistance) {
-  float normalizedDistance = distanceFromCenter / maxDistance;
-  // Use cosine with high power for smooth rounded top
-  return pow(cos(normalizedDistance * (3.14159265359 / 4.0)), 16.0);
+  float normalizedDistance = clamp(distanceFromCenter / maxDistance, 0.0, 1.0);
+  return pow(cos(normalizedDistance * (3.14159265359 * 0.5)), 0.55);
 }
 
 // Calculate the sine wave
 float oscilloscopeWave(float x, float centerX, float time) {
   float relativeX = x - centerX;
-  float maxDistance = centerX;
+  float maxDistance = 0.5;
   float distanceFromCenter = abs(relativeX);
 
-  // Apply bell curve for amplitude attenuation
   float bell = bellCurve(distanceFromCenter, maxDistance);
 
-  // Calculate wave with uniforms and bell curve attenuation
+  // Multi-cycle wave spanning full width
   float wave = sin(relativeX * uFrequency + time * uSpeed) * uAmplitude * bell;
 
   return wave;
@@ -86,65 +85,51 @@ float oscilloscopeWave(float x, float centerX, float time) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   vec2 uv = fragCoord / iResolution.xy;
-  vec2 pos = uv - 0.5;
 
-  // Calculate center and positions
   float centerX = 0.5;
   float centerY = 0.5;
   float x = uv.x;
   float y = uv.y;
 
-  // Convert line width from pixels to UV space
-  // Use the average of width and height to handle aspect ratio
-  float pixelSize = 2.0 / (iResolution.x + iResolution.y);
-  float lineWidthUV = uLineWidth * pixelSize;
-  float smoothingUV = uSmoothing * pixelSize;
+  // Search in true pixel space for isotropic, uniform stroke across any aspect ratio
+  float searchRangePixels = max(uLineWidth * 6.0, 28.0);
+  float searchRangeUV = searchRangePixels / max(iResolution.x, 1.0);
 
-  // Find minimum distance to the wave by sampling nearby points
-  // This gives us consistent line width without high-frequency artifacts
-  const int NUM_SAMPLES = 50; // Must be const for GLSL loop
-  float minDist = 1000.0;
-  float sampleRange = 0.02; // Range to search for closest point
+  const int NUM_SAMPLES = 50;
+  float minDistPixels = 10000.0;
 
   for(int i = 0; i < NUM_SAMPLES; i++) {
-    float offset = (float(i) / float(NUM_SAMPLES - 1) - 0.5) * sampleRange;
-    float sampleX = x + offset;
+    float offsetUV = (float(i) / float(NUM_SAMPLES - 1) - 0.5) * searchRangeUV;
+    float sampleX = clamp(x + offsetUV, 0.0, 1.0);
     float waveY = centerY + oscilloscopeWave(sampleX, centerX, iTime);
 
-    // Calculate distance from current pixel to this point on the wave
-    vec2 wavePoint = vec2(sampleX, waveY);
-    vec2 currentPoint = vec2(x, y);
-    float dist = distance(currentPoint, wavePoint);
+    vec2 wavePixel = vec2(sampleX * iResolution.x, waveY * iResolution.y);
+    float distPixels = distance(fragCoord.xy, wavePixel);
 
-    minDist = min(minDist, dist);
+    minDistPixels = min(minDistPixels, distPixels);
   }
 
-  // Solid line with smooth edges using minimum distance
-  float line = smoothstep(lineWidthUV + smoothingUV, lineWidthUV - smoothingUV, minDist);
+  // Smooth line with antialiasing in true pixels
+  float radius = uLineWidth * 0.7;
+  float smoothing = max(uSmoothing, 0.65);
+  float line = smoothstep(radius + smoothing, max(radius - smoothing, 0.0), minDistPixels);
+
+  // Soft atmospheric luminous glow
+  float glow = exp(-minDistPixels * 0.35) * 0.32;
 
   vec3 color = uColor;
   if(abs(uColorShift) > 0.01) {
-    // Keep the center 50% at base color, then ramp shift across outer 25% on each side.
-    float centerBandHalfWidth = 0.2;
-    float edgeBandWidth = 0.5;
     float distanceFromCenter = abs(x - centerX);
-    float edgeFactor = clamp((distanceFromCenter - centerBandHalfWidth) / edgeBandWidth, 0.0, 1.0);
+    float edgeFactor = clamp(distanceFromCenter * 2.0, 0.0, 1.0);
     vec3 hsv = rgb2hsv(color);
-    // Hue shift is zero in the center band and strongest at far edges.
-    hsv.x = fract(hsv.x + edgeFactor * uColorShift * 0.3);
+    hsv.x = fract(hsv.x + edgeFactor * uColorShift * 0.28);
     color = hsv2rgb(hsv);
   }
 
-  // Apply line intensity
-  color *= line;
+  vec3 finalColor = color * (line + glow);
+  float alpha = clamp(line + glow * 0.75, 0.0, 1.0) * uMix;
 
-  // Add dithering for smoother gradients
-  // color += (randFibo(fragCoord).x - 0.5) / 255.0;
-
-  // Calculate alpha based on line intensity
-  float alpha = line * uMix;
-
-  fragColor = vec4(color * uMix, alpha);
+  fragColor = vec4(finalColor * uMix, alpha);
 }`;
 
 interface WaveShaderProps {
@@ -239,27 +224,28 @@ function WaveShader({
 
 WaveShader.displayName = 'WaveShader';
 
-export const AgentAudioVisualizerWaveVariants = cva(['aspect-square'], {
+export const AgentAudioVisualizerWaveVariants = cva([], {
   variants: {
     size: {
-      icon: 'h-[24px]',
-      sm: 'h-[56px]',
-      md: 'h-[112px]',
-      lg: 'h-[224px]',
-      xl: 'h-[448px]',
+      icon: 'h-[24px] aspect-square',
+      sm: 'h-[56px] aspect-square',
+      md: 'h-[112px] aspect-square',
+      lg: 'h-[224px] aspect-square',
+      xl: 'h-[448px] aspect-square',
+      full: 'w-full h-full',
     },
   },
   defaultVariants: {
-    size: 'lg',
+    size: 'full',
   },
 });
 
 export interface AgentAudioVisualizerWaveProps {
   /**
    * The size of the visualizer.
-   * @defaultValue 'lg'
+   * @defaultValue 'full'
    */
-  size?: 'icon' | 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'icon' | 'sm' | 'md' | 'lg' | 'xl' | 'full';
   /**
    * The agent state.
    * @defaultValue 'speaking'
@@ -303,23 +289,9 @@ export interface AgentAudioVisualizerWaveProps {
  * A wave-style audio visualizer that responds to agent state and audio levels.
  * Displays an animated wave that reacts to the current agent state (connecting, thinking, speaking, etc.)
  * and audio volume when speaking.
- *
- * @extends ComponentProps<'div'>
- *
- * @example ```tsx
- * <AgentAudioVisualizerWave
- *   size="lg"
- *   state="speaking"
- *   color="#1FD5F9"
- *   colorShift={0.3}
- *   lineWidth={2}
- *   blur={0.5}
- *   audioTrack={audioTrack}
- * />
- * ```
  */
 export function AgentAudioVisualizerWave({
-  size = 'lg',
+  size = 'full',
   state = 'speaking',
   color,
   colorShift = 0.05,
@@ -342,7 +314,7 @@ export function AgentAudioVisualizerWave({
       case 'sm':
         return 2;
       default:
-        return 1;
+        return 2;
     }
   }, [lineWidth, size]);
 
@@ -366,7 +338,7 @@ export function AgentAudioVisualizerWave({
       blur={blur}
       className={cn(
         AgentAudioVisualizerWaveVariants({ size }),
-        'mask-[linear-gradient(90deg,transparent_0%,black_20%,black_80%,transparent_100%)]',
+        'mask-[linear-gradient(90deg,transparent_0%,black_3%,black_97%,transparent_100%)]',
         className,
       )}
       {...props}

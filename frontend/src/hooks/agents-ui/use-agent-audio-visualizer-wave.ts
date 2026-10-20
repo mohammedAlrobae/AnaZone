@@ -15,7 +15,7 @@ import {
 import { LocalAudioTrack, RemoteAudioTrack } from 'livekit-client';
 
 const DEFAULT_SPEED = 5;
-const DEFAULT_AMPLITUDE = 0.025;
+const DEFAULT_AMPLITUDE = 0.08;
 const DEFAULT_FREQUENCY = 10;
 const DEFAULT_TRANSITION: ValueAnimationTransition = { duration: 0.2, ease: 'easeOut' };
 
@@ -69,7 +69,7 @@ export function useAgentAudioVisualizerWave({
         setSpeed(DEFAULT_SPEED);
         animateAmplitude(DEFAULT_AMPLITUDE, DEFAULT_TRANSITION);
         animateFrequency(DEFAULT_FREQUENCY, DEFAULT_TRANSITION);
-        animateOpacity([1.0, 0.3], {
+        animateOpacity([1.0, 0.4], {
           duration: 0.75,
           repeat: Infinity,
           repeatType: 'mirror',
@@ -78,10 +78,10 @@ export function useAgentAudioVisualizerWave({
       case 'thinking':
       case 'connecting':
       case 'initializing':
-        setSpeed(DEFAULT_SPEED * 4);
-        animateAmplitude(DEFAULT_AMPLITUDE / 4, DEFAULT_TRANSITION);
-        animateFrequency(DEFAULT_FREQUENCY * 4, DEFAULT_TRANSITION);
-        animateOpacity([1.0, 0.3], {
+        setSpeed(DEFAULT_SPEED * 3.5);
+        animateAmplitude(DEFAULT_AMPLITUDE * 0.45, DEFAULT_TRANSITION);
+        animateFrequency(DEFAULT_FREQUENCY * 3.2, DEFAULT_TRANSITION);
+        animateOpacity([1.0, 0.4], {
           duration: 0.4,
           repeat: Infinity,
           repeatType: 'mirror',
@@ -90,8 +90,8 @@ export function useAgentAudioVisualizerWave({
       case 'speaking':
       default:
         setSpeed(DEFAULT_SPEED * 2);
-        animateAmplitude(DEFAULT_AMPLITUDE, DEFAULT_TRANSITION);
-        animateFrequency(DEFAULT_FREQUENCY, DEFAULT_TRANSITION);
+        animateAmplitude(DEFAULT_AMPLITUDE * 1.3, DEFAULT_TRANSITION);
+        animateFrequency(DEFAULT_FREQUENCY * 1.2, DEFAULT_TRANSITION);
         animateOpacity(1.0, DEFAULT_TRANSITION);
         return;
     }
@@ -99,8 +99,8 @@ export function useAgentAudioVisualizerWave({
 
   useEffect(() => {
     if (state === 'speaking') {
-      animateAmplitude(0.015 + 0.4 * volume, { duration: 0 });
-      animateFrequency(20 + 60 * volume, { duration: 0 });
+      animateAmplitude(0.06 + 0.32 * volume, { duration: 0 });
+      animateFrequency(14 + 45 * volume, { duration: 0 });
     }
   }, [state, volume, animateAmplitude, animateFrequency]);
 

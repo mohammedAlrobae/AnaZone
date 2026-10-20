@@ -42,7 +42,7 @@ export interface LiveAgentWaveProps {
   /** The current agent state */
   state?: AgentState | 'idle' | 'connecting' | 'listening' | 'thinking' | 'speaking';
   /** Visualizer size */
-  size?: 'icon' | 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'icon' | 'sm' | 'md' | 'lg' | 'xl' | 'full';
   /** Optional audio track for reactive frequency response */
   audioTrack?: LocalAudioTrack | RemoteAudioTrack | any;
   /** Volume level override (0 to 1) */
@@ -53,10 +53,10 @@ export interface LiveAgentWaveProps {
 
 export function LiveAgentWave({
   state = 'listening',
-  size = 'xl',
+  size = 'full',
   audioTrack,
   volume,
-  className = 'mx-auto aspect-square size-auto h-full',
+  className = 'w-full h-full',
 }: LiveAgentWaveProps) {
   // Map 'idle' to listening configuration for smooth ambient preview
   const stateKey = state === 'idle' ? 'listening' : state;

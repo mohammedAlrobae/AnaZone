@@ -497,8 +497,8 @@ export default function UnifiedVoiceChat({
 
   return (
     <div className="w-full h-full min-h-0 overflow-hidden bg-black/15 backdrop-blur-[3px] rounded-xl p-5 sm:p-6 flex flex-col relative text-white">
-      {/* 1. Voice Agent Live Wave Header (Exact 4 dynamic states with LiveAgentWave) */}
-      <div className="w-full shrink-0 h-[88px] flex items-center justify-center overflow-hidden relative">
+      {/* 1. Voice Agent Live Wave Header (Spanning full lateral width across chat box) */}
+      <div className="w-full shrink-0 h-[85px] sm:h-[95px] relative overflow-hidden flex items-center justify-center">
         <LiveAgentWave
           state={
             state === "processing"
@@ -507,8 +507,8 @@ export default function UnifiedVoiceChat({
               ? "listening"
               : state
           }
-          size="xl"
-          className="mx-auto aspect-square size-auto h-full"
+          size="full"
+          className="w-full h-full"
         />
       </div>
 
