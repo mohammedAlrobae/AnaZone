@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
@@ -109,7 +109,7 @@
 }
 
 :root {
-  --font-roboto: 'Roboto', sans-serif;
+  --font-dm-sans: 'DM Sans', sans-serif;
   --color-primary: #2E8B57;
   --color-secondary: #2E8B57;
   --color-accent: #78866B;
@@ -117,7 +117,8 @@
 }
 
 body, html {
-  font-family: 'Roboto', var(--font-roboto), sans-serif;
+  font-family: 'DM Sans', var(--font-dm-sans), sans-serif;
+  font-weight: 400;
   background-color: #2E8B57;
   color: #ffffff;
   overflow-x: hidden;
@@ -133,7 +134,7 @@ button {
 }
 
 [dir="rtl"] body, [dir="rtl"], [dir="rtl"] * {
-  font-family: 'Roboto', var(--font-roboto), sans-serif;
+  font-family: 'DM Sans', var(--font-dm-sans), sans-serif;
 }
 
 /* Custom scrollbar matching palette */

@@ -14,10 +14,10 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo / Brand Name */}
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white font-black text-sm">
+            <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white font-normal text-sm">
               A
             </div>
-            <span className="text-white font-black text-lg sm:text-xl tracking-tight">
+            <span className="text-white font-normal text-lg sm:text-xl tracking-tight">
               {t.brand}
             </span>
           </div>
@@ -64,15 +64,15 @@ export default function Navbar() {
             >
               <X className="w-5 h-5 text-white" />
             </button>
-            <h3 className="text-2xl font-black text-white mb-4">
+            <h3 className="text-2xl font-normal text-white mb-4">
               {t.aboutModalTitle}
             </h3>
-            <p className="text-white/95 text-sm sm:text-base leading-relaxed mb-6 font-medium whitespace-pre-line">
+            <p className="text-white/95 text-sm sm:text-base leading-relaxed mb-6 font-normal whitespace-pre-line">
               {t.aboutModalBody}
             </p>
             <button
               onClick={() => setAboutOpen(false)}
-              className="w-full py-3 rounded-lg bg-[#78866B] text-white font-medium hover:bg-[#636f58] transition-colors cursor-pointer"
+              className="w-full py-3 rounded-lg bg-[#78866B] text-white font-normal hover:bg-[#636f58] transition-colors cursor-pointer"
             >
               {t.close}
             </button>

@@ -252,8 +252,8 @@ export default function WorldMap({
         {selectedLocation && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-[#78866B] rounded-lg px-4 py-1.5 flex items-center gap-2 text-white max-w-[90%] text-xs">
             <MapPin className="w-3.5 h-3.5 text-white shrink-0" />
-            <span className="text-white/80 font-medium">{t.activeLocationLabel}:</span>
-            <span className="font-bold text-white truncate">{selectedLocation.name}</span>
+            <span className="text-white/80 font-normal">{t.activeLocationLabel}:</span>
+            <span className="font-normal text-white truncate">{selectedLocation.name}</span>
           </div>
         )}
       </div>
@@ -263,8 +263,8 @@ export default function WorldMap({
         {/* Coordinates */}
         <div className="flex items-center gap-2 text-[11px] sm:text-xs">
           <Compass className="w-3.5 h-3.5 text-white/90 shrink-0" />
-          <span className="text-white/85 font-medium">{t.mapCoordsHud}:</span>
-          <span className="font-mono text-white font-medium">
+          <span className="text-white/85 font-normal">{t.mapCoordsHud}:</span>
+          <span className="font-mono text-white font-normal">
             {mouseCoords
               ? `${mouseCoords.lat > 0 ? `${mouseCoords.lat}° N` : `${Math.abs(mouseCoords.lat)}° S`}, ${mouseCoords.lng > 0 ? `${mouseCoords.lng}° E` : `${Math.abs(mouseCoords.lng)}° W`}`
               : "26.0000° N, 30.0000° E"}
@@ -276,10 +276,10 @@ export default function WorldMap({
           <button
             type="button"
             onClick={() => void setLayer("satellite")}
-            className={`transition-colors cursor-pointer bg-transparent border-0 p-0 text-xs ${
+            className={`transition-colors cursor-pointer bg-transparent border-0 p-0 text-xs font-normal ${
               activeLayer === "satellite"
-                ? "font-bold text-white underline underline-offset-4 decoration-white"
-                : "text-white/75 hover:text-white font-normal"
+                ? "text-white underline underline-offset-4 decoration-white"
+                : "text-white/75 hover:text-white"
             }`}
           >
             {language === "ar" ? "طبيعي وقمر صناعي" : "Satellite & Nature"}
@@ -288,10 +288,10 @@ export default function WorldMap({
           <button
             type="button"
             onClick={() => void setLayer("topo")}
-            className={`transition-colors cursor-pointer bg-transparent border-0 p-0 text-xs ${
+            className={`transition-colors cursor-pointer bg-transparent border-0 p-0 text-xs font-normal ${
               activeLayer === "topo"
-                ? "font-bold text-white underline underline-offset-4 decoration-white"
-                : "text-white/75 hover:text-white font-normal"
+                ? "text-white underline underline-offset-4 decoration-white"
+                : "text-white/75 hover:text-white"
             }`}
           >
             {language === "ar" ? "تضاريس" : "Topography"}
@@ -300,10 +300,10 @@ export default function WorldMap({
           <button
             type="button"
             onClick={() => void setLayer("streets")}
-            className={`transition-colors cursor-pointer bg-transparent border-0 p-0 text-xs ${
+            className={`transition-colors cursor-pointer bg-transparent border-0 p-0 text-xs font-normal ${
               activeLayer === "streets"
-                ? "font-bold text-white underline underline-offset-4 decoration-white"
-                : "text-white/75 hover:text-white font-normal"
+                ? "text-white underline underline-offset-4 decoration-white"
+                : "text-white/75 hover:text-white"
             }`}
           >
             {language === "ar" ? "خريطة" : "Streets"}

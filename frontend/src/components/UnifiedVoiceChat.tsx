@@ -480,7 +480,7 @@ export default function UnifiedVoiceChat({
 
       {/* Error notice */}
       {errorMessage && (
-        <div className="mt-2 px-3 py-1.5 rounded-lg bg-[#8b3a3a] text-white text-xs font-semibold">
+        <div className="mt-2 px-3 py-1.5 rounded-lg bg-[#8b3a3a] text-white text-xs font-normal">
           {errorMessage}
         </div>
       )}
@@ -504,8 +504,8 @@ export default function UnifiedVoiceChat({
 
               <div
                 className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed ${isUser
-                    ? "bg-[#2e8b57] text-white font-medium rounded-xl rounded-tr-none"
-                    : "bg-black/35 text-white font-medium rounded-xl rounded-tl-none"
+                    ? "bg-[#2e8b57] text-white font-normal rounded-xl rounded-tr-none"
+                    : "bg-black/35 text-white font-normal rounded-xl rounded-tl-none"
                   }`}
                 dir="auto"
               >
@@ -516,7 +516,7 @@ export default function UnifiedVoiceChat({
                   <div className="mt-2.5 pt-1 flex items-center justify-between">
                     <button
                       onClick={() => playAudio(msg.audioBase64!, index)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#2e8b57] hover:bg-[#257347] text-white font-bold text-xs transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#2e8b57] hover:bg-[#257347] text-white font-normal text-xs transition-colors cursor-pointer"
                     >
                       {isAudioPlaying ? (
                         <>
@@ -623,7 +623,7 @@ export default function UnifiedVoiceChat({
           onChange={(e) => setInputText(e.target.value)}
           placeholder={t.inputPlaceholder}
           disabled={isTextLoading || state === "processing"}
-          className="flex-1 bg-transparent text-white placeholder-white/60 px-3 py-2 text-sm font-medium outline-hidden"
+          className="flex-1 bg-transparent text-white placeholder-white/60 px-3 py-2 text-sm font-normal outline-hidden"
           dir="auto"
         />
 

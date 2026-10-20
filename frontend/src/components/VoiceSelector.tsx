@@ -96,10 +96,10 @@ export default function VoiceSelector({
     <div className="w-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+          <h2 className="text-2xl font-normal text-white tracking-tight flex items-center gap-2">
             <span>{t.selectVoiceTitle}</span>
           </h2>
-          <p className="text-white/95 text-sm mt-1 font-semibold">
+          <p className="text-white/95 text-sm mt-1 font-normal">
             {t.selectVoiceSubtitle}
           </p>
         </div>
@@ -133,7 +133,7 @@ export default function VoiceSelector({
               <div className="flex items-center justify-between w-full mb-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-base shrink-0 transition-colors ${
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-normal text-base shrink-0 transition-colors ${
                       isSelected
                         ? "bg-white/20 text-white"
                         : "bg-[#2E8B57] text-white group-hover:bg-[#349b62]"
@@ -142,10 +142,10 @@ export default function VoiceSelector({
                     {voice.name.charAt(0)}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-extrabold text-base text-white leading-tight truncate">
+                    <h3 className="font-normal text-base text-white leading-tight truncate">
                       {voice.name}
                     </h3>
-                    <span className="text-xs font-semibold text-white/85 block mt-0.5 truncate">
+                    <span className="text-xs font-normal text-white/85 block mt-0.5 truncate">
                       {voice.role}
                     </span>
                   </div>
@@ -165,7 +165,7 @@ export default function VoiceSelector({
               </div>
 
               {/* Bottom Card Footer: Status Pill */}
-              <div className="flex items-center justify-between pt-3 mt-auto text-xs font-bold w-full">
+              <div className="flex items-center justify-between pt-3 mt-auto text-xs font-normal w-full">
                 <span className="text-white/90">
                   {isPlaying
                     ? t.playingSample
@@ -175,11 +175,11 @@ export default function VoiceSelector({
                 </span>
 
                 {isSelected ? (
-                  <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[11px] font-bold">
+                  <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[11px] font-normal">
                     {t.activeBadge}
                   </span>
                 ) : (
-                  <span className="text-[11px] text-white/70 group-hover:text-white font-medium transition-colors">
+                  <span className="text-[11px] text-white/70 group-hover:text-white font-normal transition-colors">
                     {language === "ar" ? "استماع" : "Audition"}
                   </span>
                 )}

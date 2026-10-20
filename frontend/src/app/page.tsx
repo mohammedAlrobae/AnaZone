@@ -106,10 +106,10 @@ export default function Home() {
 
         <div className="relative z-10 max-w-7xl mx-auto space-y-8">
           <div className="max-w-3xl">
-            <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-3">
+            <h2 className="text-3xl sm:text-5xl font-normal text-white tracking-tight mb-3">
               {t.sectionTitle}
             </h2>
-            <p className="text-white/95 font-semibold text-base sm:text-lg leading-relaxed">
+            <p className="text-white/95 font-normal text-base sm:text-lg leading-relaxed">
               {t.sectionSubtitle}
             </p>
           </div>
@@ -164,11 +164,11 @@ export default function Home() {
 
       <footer className="w-full bg-[#2E8B57] py-5 px-6 text-white">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs sm:text-sm">
-          <span className="font-bold tracking-wide text-white">
+          <span className="font-normal tracking-wide text-white">
             {t.footerBrand}
           </span>
 
-          <div className="flex items-center gap-4 font-medium">
+          <div className="flex items-center gap-4 font-normal">
             <a
               href="mailto:moalrobae@gmail.com"
               className="flex items-center gap-1.5 text-white hover:text-[#2e8b57] transition-colors"
