@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Play, Pause, ChevronLeft, ChevronRight, ArrowUpRight, Volume2 } from "lucide-react";
+import { Play, Pause, ChevronLeft, ChevronRight, ArrowUpRight } from "lucide-react";
 import { getVoiceSampleUrl } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
@@ -322,53 +322,11 @@ export default function VoiceSelector({
 
           {/* Persona Tagline Description */}
           <p
-            className="text-white/85 text-xs sm:text-sm font-normal max-w-md mx-auto leading-relaxed px-4"
+            className="text-white/85 text-xs sm:text-sm font-normal max-w-md mx-auto leading-relaxed px-4 drop-shadow-md"
             dir={isRtl ? "rtl" : "ltr"}
           >
             {currentVoice.description}
           </p>
-        </div>
-
-        {/* =======================================================
-            3. Bottom Category Selector Pills (Cleanly Floating)
-           ======================================================= */}
-        <div className="relative z-10 mt-5 w-full flex flex-wrap items-center justify-center gap-2 sm:gap-2.5">
-          {voices.map((voice) => {
-            const isSelected = selectedVoice === voice.id;
-            const isPlaying = playingVoice === voice.id;
-
-            return (
-              <button
-                key={voice.id}
-                type="button"
-                onClick={() => {
-                  handleSelect(voice.id);
-                  toggleAudition(voice.id);
-                }}
-                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-normal transition-all duration-200 cursor-pointer ${
-                  isSelected
-                    ? "bg-white text-gray-900 shadow-lg scale-105"
-                    : "bg-black/30 hover:bg-black/45 text-white/85 hover:text-white border border-white/15"
-                }`}
-              >
-                {/* Micro Color Indicator Dot */}
-                <span
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: voice.accentColor }}
-                />
-
-                <span>{voice.name}</span>
-
-                <span className="text-[11px] opacity-70">
-                  • {voice.categoryTag}
-                </span>
-
-                {isPlaying && (
-                  <Volume2 className="w-3.5 h-3.5 text-gray-900 animate-pulse ml-1" />
-                )}
-              </button>
-            );
-          })}
         </div>
       </div>
     </div>
