@@ -15,7 +15,7 @@ def get_env(key: str, default: str = "") -> str:
 # Cloudflare Configuration
 CLOUDFLARE_API_TOKEN = get_env("CLOUDFLARE_API_TOKEN")
 CLOUDFLARE_ACCOUNT_ID = get_env("CLOUDFLARE_ACCOUNT_ID")
-CLOUDFLARE_WHISPER_MODEL = "@cf/openai/whisper-large-v3-turbo"
+CLOUDFLARE_WHISPER_MODEL = get_env("CLOUDFLARE_WHISPER_MODEL", "@cf/openai/whisper")
 
 # LLM Configuration
 LLM_API_URL = get_env("LLM_API_URL", "http://127.0.0.1:4000/v1/chat/completions")

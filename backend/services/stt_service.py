@@ -51,8 +51,8 @@ class CloudflareWhisperSTTService:
         self.api_url = f"https://api.cloudflare.com/client/v4/accounts/{self.account_id}/ai/run/{self.model}"
 
     def transcribe(self, audio_bytes: bytes, language: Optional[str] = None) -> Tuple[str, str]:
-        if not audio_bytes:
-            raise ValueError("Audio buffer is empty")
+        if not audio_bytes or len(audio_bytes) < 44:
+            return "", "ar"
 
         rms = get_audio_rms(audio_bytes)
         if rms < 0.003:
@@ -64,14 +64,13 @@ class CloudflareWhisperSTTService:
 
         headers = {
             "Authorization": f"Bearer {self.api_token}",
-            "Content-Type": "application/octet-stream"
         }
 
         logger.info(f"Sending audio ({len(audio_bytes):,} bytes) to Cloudflare Workers AI ({self.model})...")
         response = requests.post(
             self.api_url,
             headers=headers,
-            data=audio_bytes,
+            json={"audio": list(audio_bytes)},
             timeout=25
         )
 
