@@ -43,11 +43,11 @@ export default function HeroSection({ onScrollToAgent }: HeroSectionProps) {
           <div className="flex flex-col items-start rtl:items-start gap-3">
             <button
               onClick={onScrollToAgent}
-              className="flex items-center gap-3 px-7 py-3.5 rounded-xl bg-[#2e8b57] text-white hover:bg-[#257347] border border-white font-normal text-base sm:text-lg transition-all duration-200 cursor-pointer"
+              className="group flex items-center gap-3 px-7 py-3.5 rounded-xl bg-[#2e8b57] text-white hover:bg-[#257347] border border-white font-normal text-base sm:text-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl cursor-pointer"
               aria-label="Jump to voice agent section"
             >
               <span>{t.heroCta}</span>
-              <ArrowDown className="w-5 h-5 shrink-0" />
+              <ArrowDown className="w-5 h-5 shrink-0 transition-transform duration-200 group-hover:translate-y-1 animate-bounce" />
             </button>
             <span className="text-white/90 text-xs font-normal tracking-wide">
               {t.heroJumpHint}
