@@ -180,17 +180,9 @@ export default function VoiceSelector({
         />
 
         {/* =======================================================
-            1. The 3D Luminous Sphere Carousel (ElevenLabs Style)
+            1. The 3D Luminous Sphere Carousel (Strictly 3 Personas)
            ======================================================= */}
-        <div className="relative w-full flex items-center justify-center gap-3 sm:gap-6 md:gap-10 py-4 sm:py-6 z-10">
-          {/* Edge Left Ghost Orb (Subtle infinite depth feeling) */}
-          <div
-            className="hidden sm:block w-10 h-10 sm:w-14 sm:h-14 rounded-full opacity-30 filter blur-[1.5px] transition-all duration-500 scale-90"
-            style={{
-              background: "radial-gradient(circle at 35% 30%, #e2e8f0 0%, #94a3b8 40%, #475569 85%, #0f172a 100%)",
-            }}
-          />
-
+        <div className="relative w-full flex items-center justify-center gap-5 sm:gap-10 md:gap-16 py-4 sm:py-6 z-10">
           {/* Left Neighbor Orb */}
           <div
             onClick={() => handleSelect(leftVoice.id)}
@@ -198,10 +190,10 @@ export default function VoiceSelector({
             title={`${leftVoice.name} - ${leftVoice.categoryTag}`}
           >
             <div
-              className="w-18 h-18 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full transition-all duration-500 relative opacity-70 group-hover:opacity-95"
+              className="w-20 h-20 sm:w-26 sm:h-26 md:w-32 md:h-32 rounded-full transition-all duration-500 relative opacity-75 group-hover:opacity-100"
               style={{
                 background: leftVoice.gradient,
-                boxShadow: `0 12px 30px -8px ${leftVoice.glowColor}, ${leftVoice.innerShadow}`,
+                boxShadow: `0 14px 35px -8px ${leftVoice.glowColor}, ${leftVoice.innerShadow}`,
               }}
             >
               {/* Grain Texture Overlay */}
@@ -214,12 +206,12 @@ export default function VoiceSelector({
               />
             </div>
             {/* Short Tag Below Neighbor Orb */}
-            <span className="hidden sm:block text-xs font-normal text-white/70 mt-2 group-hover:text-white transition-colors">
+            <span className="text-xs sm:text-sm font-normal text-white/80 mt-2.5 group-hover:text-white transition-colors drop-shadow-sm">
               {leftVoice.name}
             </span>
           </div>
 
-          {/* Center Active Orb (Hero - Compact & Sleek) */}
+          {/* Center Active Orb (Hero - Selected Persona) */}
           <div
             onClick={() => toggleAudition(currentVoice.id)}
             className="group relative flex flex-col items-center cursor-pointer transition-all duration-500 z-20"
@@ -234,12 +226,12 @@ export default function VoiceSelector({
             )}
 
             <div
-              className={`w-28 h-28 sm:w-36 sm:h-36 md:w-44 md:h-44 rounded-full transition-all duration-500 relative flex items-center justify-center ${
-                isCurrentPlaying ? "scale-105" : "hover:scale-102"
+              className={`w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-full transition-all duration-500 relative flex items-center justify-center ${
+                isCurrentPlaying ? "scale-105" : "hover:scale-103"
               }`}
               style={{
                 background: currentVoice.gradient,
-                boxShadow: `0 20px 50px -10px ${currentVoice.glowColor}, ${currentVoice.innerShadow}`,
+                boxShadow: `0 22px 55px -10px ${currentVoice.glowColor}, ${currentVoice.innerShadow}`,
               }}
             >
               {/* Grain Texture Overlay */}
@@ -256,7 +248,7 @@ export default function VoiceSelector({
                 type="button"
                 onClick={(e) => toggleAudition(currentVoice.id, e)}
                 aria-label={isCurrentPlaying ? "Pause audition" : "Play audition"}
-                className="relative z-30 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white text-gray-900 shadow-2xl flex items-center justify-center transition-all duration-200 hover:scale-115 active:scale-95 cursor-pointer"
+                className="relative z-30 w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-white text-gray-900 shadow-2xl flex items-center justify-center transition-all duration-200 hover:scale-115 active:scale-95 cursor-pointer"
               >
                 {isCurrentPlaying ? (
                   <Pause className="w-4 h-4 sm:w-5 sm:h-5 fill-gray-900 text-gray-900" />
@@ -274,10 +266,10 @@ export default function VoiceSelector({
             title={`${rightVoice.name} - ${rightVoice.categoryTag}`}
           >
             <div
-              className="w-18 h-18 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full transition-all duration-500 relative opacity-70 group-hover:opacity-95"
+              className="w-20 h-20 sm:w-26 sm:h-26 md:w-32 md:h-32 rounded-full transition-all duration-500 relative opacity-75 group-hover:opacity-100"
               style={{
                 background: rightVoice.gradient,
-                boxShadow: `0 12px 30px -8px ${rightVoice.glowColor}, ${rightVoice.innerShadow}`,
+                boxShadow: `0 14px 35px -8px ${rightVoice.glowColor}, ${rightVoice.innerShadow}`,
               }}
             >
               {/* Grain Texture Overlay */}
@@ -290,18 +282,10 @@ export default function VoiceSelector({
               />
             </div>
             {/* Short Tag Below Neighbor Orb */}
-            <span className="hidden sm:block text-xs font-normal text-white/70 mt-2 group-hover:text-white transition-colors">
+            <span className="text-xs sm:text-sm font-normal text-white/80 mt-2.5 group-hover:text-white transition-colors drop-shadow-sm">
               {rightVoice.name}
             </span>
           </div>
-
-          {/* Edge Right Ghost Orb (Subtle infinite depth feeling) */}
-          <div
-            className="hidden sm:block w-10 h-10 sm:w-14 sm:h-14 rounded-full opacity-30 filter blur-[1.5px] transition-all duration-500 scale-90"
-            style={{
-              background: "radial-gradient(circle at 35% 30%, #fef3c7 0%, #cbd5e1 40%, #64748b 85%, #0f172a 100%)",
-            }}
-          />
         </div>
 
         {/* =======================================================
