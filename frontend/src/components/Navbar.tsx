@@ -15,7 +15,7 @@ export default function Navbar() {
           {/* Logo / Brand Name */}
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white font-black text-sm">
-              V
+              A
             </div>
             <span className="text-white font-black text-lg sm:text-xl tracking-tight">
               {t.brand}
