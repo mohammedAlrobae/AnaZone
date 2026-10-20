@@ -16,6 +16,11 @@ export const AGENT_WAVE_CONFIGS: Record<
   string,
   { color: `#${string}`; colorShift: number; lineWidth: number }
 > = {
+  disconnected: {
+    color: '#ff2222',
+    colorShift: 0.0,
+    lineWidth: 2.2,
+  },
   speaking: {
     color: '#0026ff',
     colorShift: 1.98,
@@ -40,7 +45,7 @@ export const AGENT_WAVE_CONFIGS: Record<
 
 export interface LiveAgentWaveProps {
   /** The current agent state */
-  state?: AgentState | 'idle' | 'connecting' | 'listening' | 'thinking' | 'speaking';
+  state?: AgentState | 'disconnected' | 'connecting' | 'listening' | 'thinking' | 'speaking';
   /** Visualizer size */
   size?: 'icon' | 'sm' | 'md' | 'lg' | 'xl' | 'full';
   /** Optional audio track for reactive frequency response */
@@ -52,15 +57,13 @@ export interface LiveAgentWaveProps {
 }
 
 export function LiveAgentWave({
-  state = 'listening',
+  state = 'disconnected',
   size = 'full',
   audioTrack,
   volume,
   className = 'w-full h-full',
 }: LiveAgentWaveProps) {
-  // Map 'idle' to listening configuration for smooth ambient preview
-  const stateKey = state === 'idle' ? 'listening' : state;
-  const config = AGENT_WAVE_CONFIGS[stateKey] || AGENT_WAVE_CONFIGS.listening;
+  const config = AGENT_WAVE_CONFIGS[state] || AGENT_WAVE_CONFIGS.disconnected;
 
   return (
     <AgentAudioVisualizerWave
@@ -68,7 +71,7 @@ export function LiveAgentWave({
       color={config.color}
       colorShift={config.colorShift}
       lineWidth={config.lineWidth}
-      state={(state === 'idle' ? 'listening' : state) as AgentState}
+      state={state as AgentState}
       audioTrack={audioTrack}
       volume={volume}
       className={className}

@@ -37,7 +37,7 @@ interface UnifiedVoiceChatProps {
   onAgentSpeakingChange?: (speaking: boolean) => void;
 }
 
-type AgentState = "idle" | "connecting" | "listening" | "thinking" | "processing" | "speaking" | "error";
+type AgentState = "disconnected" | "connecting" | "listening" | "thinking" | "speaking";
 
 function mergeTranscript(previous: string, next: string): string {
   const previousWords = previous.trim().split(/\s+/).filter(Boolean);
@@ -65,7 +65,7 @@ export default function UnifiedVoiceChat({
   agentSpeakingAudio,
   onAgentSpeakingChange,
 }: UnifiedVoiceChatProps) {
-  const [state, setState] = useState<AgentState>("idle");
+  const [state, setState] = useState<AgentState>("disconnected");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [volumeLevel, setVolumeLevel] = useState<number>(0);
   const [inputText, setInputText] = useState("");
@@ -176,7 +176,7 @@ export default function UnifiedVoiceChat({
       currentAudioRef.current.pause();
       playingAudioIndexRef.current = null;
       setPlayingAudioIndex(null);
-      setAgentState("idle");
+      setAgentState(handsFreeRef.current ? "listening" : "disconnected");
       if (handsFreeRef.current) resumeListeningRef.current();
       return;
     }
@@ -197,27 +197,39 @@ export default function UnifiedVoiceChat({
     currentAudioRef.current = audio;
 
     audio.onended = () => {
-      setAgentState("idle");
       playingAudioIndexRef.current = null;
       setPlayingAudioIndex(null);
       currentAudioRef.current = null;
-      if (handsFreeRef.current) resumeListeningRef.current();
+      if (handsFreeRef.current) {
+        setAgentState("listening");
+        resumeListeningRef.current();
+      } else {
+        setAgentState("disconnected");
+      }
     };
 
     audio.onerror = () => {
-      setAgentState("idle");
       playingAudioIndexRef.current = null;
       setPlayingAudioIndex(null);
       currentAudioRef.current = null;
-      if (handsFreeRef.current) resumeListeningRef.current();
+      if (handsFreeRef.current) {
+        setAgentState("listening");
+        resumeListeningRef.current();
+      } else {
+        setAgentState("disconnected");
+      }
     };
 
     audio.play().catch((err) => {
       console.warn("Autoplay notice:", err);
-      setAgentState("idle");
       playingAudioIndexRef.current = null;
       setPlayingAudioIndex(null);
-      if (handsFreeRef.current) resumeListeningRef.current();
+      if (handsFreeRef.current) {
+        setAgentState("listening");
+        resumeListeningRef.current();
+      } else {
+        setAgentState("disconnected");
+      }
     });
   }, [setAgentState]);
 
@@ -233,7 +245,7 @@ export default function UnifiedVoiceChat({
       currentAudioRef.current = null;
     }
     playingAudioIndexRef.current = null;
-    setAgentState("idle");
+    setAgentState(handsFreeRef.current ? "listening" : "disconnected");
     setPlayingAudioIndex(null);
   }, [setAgentState]);
 
@@ -265,7 +277,7 @@ export default function UnifiedVoiceChat({
     } catch (err: unknown) {
       console.error("Microphone error:", err);
       recorderRef.current = null;
-      setAgentState("error");
+      setAgentState("disconnected");
       setErrorMessage("Could not access microphone.");
       return false;
     }
@@ -290,7 +302,7 @@ export default function UnifiedVoiceChat({
         if (handsFreeRef.current) {
           resumeListeningRef.current();
         } else {
-          setAgentState("idle");
+          setAgentState("disconnected");
           setErrorMessage(t.noSpeechError);
           setTimeout(() => setErrorMessage(null), 3000);
         }
@@ -316,7 +328,7 @@ export default function UnifiedVoiceChat({
 
       if (!response.user_text && !response.bot_text) {
         if (handsFreeRef.current) resumeListeningRef.current();
-        else setAgentState("idle");
+        else setAgentState("disconnected");
         return;
       }
 
@@ -329,13 +341,13 @@ export default function UnifiedVoiceChat({
       } else if (handsFreeRef.current) {
         resumeListeningRef.current();
       } else {
-        setAgentState("idle");
+        setAgentState("disconnected");
       }
     } catch (err: unknown) {
       console.error("Pipeline error:", err);
       handsFreeRef.current = false;
       setIsHandsFree(false);
-      setAgentState("error");
+      setAgentState("disconnected");
       setErrorMessage((err as Error)?.message || "Error processing voice request");
     } finally {
       processingRef.current = false;
@@ -391,7 +403,7 @@ export default function UnifiedVoiceChat({
       setIsHandsFree(false);
       setIsLiveKitConnected(false);
       startingConversationRef.current = false;
-      setAgentState("idle");
+      setAgentState("disconnected");
       return;
     }
 
@@ -419,7 +431,7 @@ export default function UnifiedVoiceChat({
         await recorderRef.current.stop();
         recorderRef.current = null;
       }
-      setAgentState("error");
+      setAgentState("disconnected");
       setErrorMessage((err as Error)?.message || "Could not start the conversation.");
     } finally {
       startingConversationRef.current = false;
@@ -448,11 +460,11 @@ export default function UnifiedVoiceChat({
       recorderRef.current = null;
       await recorder.stop();
       setVolumeLevel(0);
-      if (state === "listening") setAgentState("idle");
+      setAgentState("disconnected");
       return;
     }
 
-    if (!nextMutedState && !recorderRef.current && state !== "processing" && state !== "speaking") {
+    if (!nextMutedState && !recorderRef.current && state !== "thinking" && state !== "speaking") {
       await startListening();
     }
   };
@@ -463,6 +475,7 @@ export default function UnifiedVoiceChat({
 
     setInputText("");
     setIsTextLoading(true);
+    setAgentState("thinking");
 
     try {
       const locationContextStr = activeLocation
@@ -486,10 +499,13 @@ export default function UnifiedVoiceChat({
 
       if (res.audio_base64) {
         playAudio(res.audio_base64, messages.length + 1);
+      } else {
+        setAgentState(handsFreeRef.current ? "listening" : "disconnected");
       }
     } catch (err: unknown) {
       console.error("Chat error:", err);
       onSendMessage(text, t.chatErrorNotice, null);
+      setAgentState(handsFreeRef.current ? "listening" : "disconnected");
     } finally {
       setIsTextLoading(false);
     }
@@ -503,42 +519,41 @@ export default function UnifiedVoiceChat({
         <div className="flex items-center gap-2 mb-1 px-3 py-0.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm text-xs font-medium tracking-wide transition-all duration-300">
           <span
             className={`w-2 h-2 rounded-full transition-colors duration-300 ${
-              state === "connecting"
+              state === "disconnected"
+                ? "bg-[#ff2222] shadow-[0_0_8px_#ff2222]"
+                : state === "connecting"
                 ? "bg-[#1eff00] shadow-[0_0_8px_#1eff00] animate-pulse"
-                : state === "thinking" || state === "processing"
+                : state === "listening"
+                ? "bg-[#ff5500] shadow-[0_0_8px_#ff5500] animate-pulse"
+                : state === "thinking"
                 ? "bg-[#ff00e1] shadow-[0_0_8px_#ff00e1] animate-pulse"
-                : state === "speaking"
-                ? "bg-[#0026ff] shadow-[0_0_8px_#0026ff] animate-pulse"
-                : "bg-[#ff5500] shadow-[0_0_8px_#ff5500]"
+                : "bg-[#0026ff] shadow-[0_0_8px_#0026ff] animate-pulse"
             }`}
           />
           <span className="text-white/85 select-none text-[11px] sm:text-xs">
-            {state === "connecting"
+            {state === "disconnected"
+              ? (language === "ar" ? "غير متصل" : "Disconnected")
+              : state === "connecting"
               ? (language === "ar" ? "جارٍ الاتصال..." : "Connecting...")
-              : state === "thinking" || state === "processing"
-              ? (language === "ar" ? "جارٍ التفكير..." : "Thinking...")
-              : state === "speaking"
-              ? (language === "ar" ? "يتحدث الآن..." : "Speaking...")
-              : isHandsFree
+              : state === "listening"
               ? (language === "ar" ? "جارٍ الاستماع..." : "Listening...")
-              : (language === "ar" ? "مستعد للمحادثة" : "Ready to talk")}
+              : state === "thinking"
+              ? (language === "ar" ? "جارٍ التفكير..." : "Thinking...")
+              : (language === "ar" ? "يتحدث الآن..." : "Speaking...")}
           </span>
         </div>
 
         {/* Live Agent Wave spanning the full lateral width */}
         <div className="w-full h-[65px] sm:h-[75px] relative overflow-hidden flex items-center justify-center">
           <LiveAgentWave
-            state={
-              state === "processing"
-                ? "thinking"
-                : state === "idle" || state === "error"
-                ? "listening"
-                : state
-            }
+            state={state}
             size="full"
             className="w-full h-full"
           />
         </div>
+
+        {/* Perfect thin horizontal white line under the voice wave shape */}
+        <div className="w-full h-px bg-white/20 mt-1 shrink-0" />
       </div>
 
       {/* Error notice */}
@@ -658,7 +673,7 @@ export default function UnifiedVoiceChat({
               : t.muteMicrophone
           }
           className={`p-2.5 rounded-lg transition-all duration-200 cursor-pointer shrink-0 flex items-center justify-center outline-none focus:outline-none focus:ring-0 ${
-            !isHandsFree
+            !isHandsFree || state === "disconnected"
               ? "text-white/80 hover:text-white hover:bg-white/10"
               : isMicMuted
               ? "bg-[#78866B] text-white"
@@ -666,16 +681,16 @@ export default function UnifiedVoiceChat({
               ? "bg-[#1eff00] text-black shadow-[0_0_12px_rgba(30,255,0,0.7)] animate-pulse"
               : state === "listening"
               ? "bg-[#ff5500] text-white shadow-[0_0_12px_rgba(255,85,0,0.7)] animate-pulse"
-              : state === "thinking" || state === "processing"
+              : state === "thinking"
               ? "bg-[#ff00e1] text-white shadow-[0_0_12px_rgba(255,0,225,0.7)] animate-pulse"
               : state === "speaking"
               ? "bg-[#0026ff] text-white shadow-[0_0_12px_rgba(0,38,255,0.7)]"
-              : "bg-[#78866B] text-white"
+              : "text-white/80 hover:text-white hover:bg-white/10"
           }`}
         >
           {isMicMuted ? (
             <MicOff className="w-4 h-4 text-white" />
-          ) : state === "connecting" || state === "thinking" || state === "processing" ? (
+          ) : state === "connecting" || state === "thinking" ? (
             <Loader2 className="w-4 h-4 animate-spin text-white" />
           ) : state === "speaking" ? (
             <Volume2 className="w-4 h-4 text-white" />
@@ -689,7 +704,7 @@ export default function UnifiedVoiceChat({
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           placeholder={t.inputPlaceholder}
-          disabled={isTextLoading || state === "processing"}
+          disabled={isTextLoading || state === "thinking"}
           className="flex-1 bg-transparent text-white placeholder-white/60 px-3 py-2 text-sm font-normal outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 border-none focus:border-none shadow-none"
           style={{ outline: "none", boxShadow: "none" }}
           dir="auto"
@@ -697,7 +712,7 @@ export default function UnifiedVoiceChat({
 
         <button
           type="submit"
-          disabled={!inputText.trim() || isTextLoading || state === "processing"}
+          disabled={!inputText.trim() || isTextLoading || state === "thinking"}
           className="bg-[#2e8b57] hover:bg-[#257347] disabled:opacity-40 text-white p-2.5 rounded-lg cursor-pointer transition-colors shrink-0 outline-none focus:outline-none focus:ring-0"
           title="Send"
         >

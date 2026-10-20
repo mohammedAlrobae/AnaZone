@@ -60,10 +60,10 @@ export function useAgentAudioVisualizerWave({
   useEffect(() => {
     switch (state) {
       case 'disconnected':
-        setSpeed(DEFAULT_SPEED);
-        animateAmplitude(0, DEFAULT_TRANSITION);
-        animateFrequency(0, DEFAULT_TRANSITION);
-        animateOpacity(1.0, DEFAULT_TRANSITION);
+        setSpeed(DEFAULT_SPEED * 0.7);
+        animateAmplitude(DEFAULT_AMPLITUDE * 0.45, DEFAULT_TRANSITION);
+        animateFrequency(DEFAULT_FREQUENCY * 0.7, DEFAULT_TRANSITION);
+        animateOpacity(0.9, DEFAULT_TRANSITION);
         return;
       case 'listening':
         setSpeed(DEFAULT_SPEED);
