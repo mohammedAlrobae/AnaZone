@@ -9,6 +9,8 @@ import {
   MapPin,
   Bot,
   User,
+  Mic,
+  MicOff,
 } from "lucide-react";
 import { WavRecorder } from "@/lib/wavRecorder";
 import {
@@ -468,27 +470,12 @@ export default function UnifiedVoiceChat({
 
   return (
     <div className="w-full h-full min-h-0 overflow-hidden bg-black/15 backdrop-blur-[3px] rounded-xl p-5 sm:p-6 flex flex-col relative text-white">
-      <div>
+      {/* 1. Voice Agent Live Wave Header (Pure wave with real dynamic movement) */}
+      <div className="w-full shrink-0">
         <DynamicVoiceWave
           state={state}
           volumeLevel={volumeLevel}
           isMicMuted={isMicMuted}
-          onClick={() => void handleVoiceControl()}
-          statusLabel={
-            !isHandsFree
-              ? t.startVoiceChat
-              : isMicMuted
-                ? t.microphoneMuted
-                : state === "listening"
-                  ? t.statusListening
-                  : state === "processing"
-                    ? t.statusProcessing
-                    : state === "speaking"
-                      ? t.statusSpeaking
-                      : t.statusError
-          }
-          hintLabel={!isHandsFree ? "" : isMicMuted ? t.unmuteMicrophone : t.muteMicrophone}
-          actionLabel={!isHandsFree ? t.startVoiceChat : isMicMuted ? t.unmuteMicrophone : t.muteMicrophone}
         />
       </div>
 
@@ -593,23 +580,67 @@ export default function UnifiedVoiceChat({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 4. Bottom Text Input Bar (Input area retains visible edge) */}
+      {/* 4. Bottom Text Input Bar with Mic Connection Button on the LEFT */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
           handleSendText();
         }}
+        dir="ltr"
         className="mt-3 p-1.5 rounded-xl bg-black/30 border border-white/20 flex items-center gap-2"
       >
+        {/* Connection / Mic Icon Button placed strictly on the left */}
+        <button
+          type="button"
+          onClick={() => void handleVoiceControl()}
+          disabled={state === "processing"}
+          aria-label={
+            !isHandsFree
+              ? t.startVoiceChat
+              : isMicMuted
+              ? t.unmuteMicrophone
+              : t.muteMicrophone
+          }
+          title={
+            !isHandsFree
+              ? t.startVoiceChat
+              : isMicMuted
+              ? t.unmuteMicrophone
+              : t.muteMicrophone
+          }
+          className={`p-2.5 rounded-lg transition-all duration-200 cursor-pointer shrink-0 flex items-center justify-center outline-none ${
+            !isHandsFree
+              ? "text-white/80 hover:text-white hover:bg-white/10"
+              : isMicMuted
+              ? "bg-[#78866B] text-white"
+              : state === "listening"
+              ? "bg-[#2E8B57] text-white shadow-[0_0_12px_rgba(46,139,87,0.7)] animate-pulse"
+              : state === "speaking"
+              ? "bg-[#2E8B57] text-white shadow-[0_0_10px_rgba(46,139,87,0.5)]"
+              : "bg-[#78866B] text-white"
+          }`}
+        >
+          {isMicMuted ? (
+            <MicOff className="w-4 h-4 text-white" />
+          ) : state === "processing" ? (
+            <Loader2 className="w-4 h-4 animate-spin text-white" />
+          ) : state === "speaking" ? (
+            <Volume2 className="w-4 h-4 text-white" />
+          ) : (
+            <Mic className="w-4 h-4 text-white" />
+          )}
+        </button>
+
         <input
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           placeholder={t.inputPlaceholder}
           disabled={isTextLoading || state === "processing"}
-          className="flex-1 bg-transparent text-white placeholder-white/60 px-4 py-2 text-sm font-medium outline-hidden"
+          className="flex-1 bg-transparent text-white placeholder-white/60 px-3 py-2 text-sm font-medium outline-hidden"
           dir="auto"
         />
+
         <button
           type="submit"
           disabled={!inputText.trim() || isTextLoading || state === "processing"}

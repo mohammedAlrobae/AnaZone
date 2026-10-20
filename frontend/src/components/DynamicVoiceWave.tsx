@@ -1,117 +1,242 @@
 "use client";
 
-import React from "react";
-import { Mic, MicOff, Volume2, Loader2 } from "lucide-react";
+import React, { useRef, useEffect } from "react";
 
 export type AgentState = "idle" | "listening" | "processing" | "speaking" | "error";
 
 interface DynamicVoiceWaveProps {
   state: AgentState;
   volumeLevel: number;
-  isMicMuted: boolean;
-  onClick: () => void;
-  statusLabel: string;
-  hintLabel: string;
-  actionLabel: string;
+  isMicMuted?: boolean;
+  className?: string;
 }
 
 export default function DynamicVoiceWave({
   state,
   volumeLevel,
-  isMicMuted,
-  onClick,
-  statusLabel,
-  hintLabel,
-  actionLabel,
+  isMicMuted = false,
+  className = "",
 }: DynamicVoiceWaveProps) {
-  const listeningScale = 0.72 + Math.min(volumeLevel / 100, 1) * 0.48;
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const animFrameRef = useRef<number | null>(null);
+
+  // Smooth interpolation reference values
+  const currentAmpRef = useRef<number>(10);
+  const volumeSmoothedRef = useRef<number>(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let width = canvas.parentElement?.clientWidth || 400;
+    let height = canvas.parentElement?.clientHeight || 90;
+
+    const applyDpr = (w: number, h: number) => {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.floor(w * dpr));
+      canvas.height = Math.max(1, Math.floor(h * dpr));
+      if (ctx.setTransform) {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      } else {
+        ctx.resetTransform?.();
+        ctx.scale(dpr, dpr);
+      }
+    };
+
+    applyDpr(width, height);
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const rect = entry.contentRect;
+        if (rect.width > 0 && rect.height > 0) {
+          width = rect.width;
+          height = rect.height;
+          applyDpr(width, height);
+        }
+      }
+    });
+
+    if (canvas.parentElement) {
+      resizeObserver.observe(canvas.parentElement);
+    }
+
+    // Layer definitions with distinct harmonic speeds, frequencies, and transparencies in approved #2E8B57 palette
+    const layers = [
+      {
+        freq1: 0.009,
+        freq2: 0.018,
+        speed: 0.022,
+        ampFactor: 0.65,
+        colorTop: "rgba(46, 139, 87, 0.40)",
+        colorBottom: "rgba(46, 139, 87, 0.08)",
+        strokeColor: "rgba(46, 139, 87, 0.55)",
+        lineWidth: 1.5,
+      },
+      {
+        freq1: 0.013,
+        freq2: 0.026,
+        speed: 0.032,
+        ampFactor: 0.85,
+        colorTop: "rgba(46, 139, 87, 0.55)",
+        colorBottom: "rgba(46, 139, 87, 0.12)",
+        strokeColor: "rgba(46, 139, 87, 0.75)",
+        lineWidth: 2,
+      },
+      {
+        freq1: 0.016,
+        freq2: 0.032,
+        speed: 0.042,
+        ampFactor: 1.05,
+        colorTop: "rgba(52, 168, 98, 0.70)",
+        colorBottom: "rgba(46, 139, 87, 0.18)",
+        strokeColor: "rgba(120, 220, 160, 0.95)",
+        lineWidth: 2.5,
+      },
+    ];
+
+    let t = 0;
+
+    const render = () => {
+      if (width <= 0 || height <= 0) {
+        animFrameRef.current = requestAnimationFrame(render);
+        return;
+      }
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Smooth volume interpolation
+      volumeSmoothedRef.current += (volumeLevel - volumeSmoothedRef.current) * 0.25;
+      const smoothVol = volumeSmoothedRef.current;
+
+      // Calculate dynamic target amplitude & speed based on state
+      let targetAmp = 9; // Idle gentle baseline
+      let speedMult = 1.0;
+
+      if (state === "listening") {
+        if (isMicMuted) {
+          targetAmp = 4;
+          speedMult = 0.5;
+        } else {
+          // Energetic real-time microphone reactivity
+          targetAmp = 8 + Math.min(smoothVol * 0.45, 34);
+          speedMult = 1.3 + Math.min(smoothVol / 60, 1.4);
+        }
+      } else if (state === "speaking") {
+        // Natural speech rhythm with modulated cadence
+        const speechEnvelope =
+          (Math.sin(t * 3.8) * 0.5 + 0.5) * (Math.cos(t * 2.1) * 0.35 + 0.65);
+        targetAmp = 15 + speechEnvelope * 22;
+        speedMult = 2.0;
+      } else if (state === "processing") {
+        // Smooth circulating shimmer wave
+        targetAmp = 12 + Math.sin(t * 5.2) * 4;
+        speedMult = 2.4;
+      } else if (state === "error") {
+        targetAmp = 4;
+        speedMult = 0.4;
+      }
+
+      // Smooth amplitude lerp for organic physical feel
+      currentAmpRef.current += (targetAmp - currentAmpRef.current) * 0.14;
+      const currentAmp = currentAmpRef.current;
+
+      t += 0.02 * speedMult;
+      const centerY = height / 2;
+
+      // Render layered wave ribbons
+      layers.forEach((layer, idx) => {
+        ctx.beginPath();
+        const step = 4;
+        const effectiveAmp = currentAmp * layer.ampFactor;
+
+        // Top edge of the ribbon
+        for (let x = 0; x <= width; x += step) {
+          const normX = x / width;
+          // Taper envelope to zero at both sides
+          const envelope = Math.pow(Math.sin(normX * Math.PI), 1.2);
+
+          const w1 = Math.sin(x * layer.freq1 + t * layer.speed * 45 + idx * 1.6);
+          const w2 = Math.cos(x * layer.freq2 - t * layer.speed * 28);
+          const displacement = (w1 * 0.65 + w2 * 0.35) * effectiveAmp * envelope;
+
+          const y = centerY - displacement;
+
+          if (x === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+
+        // Bottom edge of the ribbon (mirrored with harmonic offset)
+        for (let x = width; x >= 0; x -= step) {
+          const normX = x / width;
+          const envelope = Math.pow(Math.sin(normX * Math.PI), 1.2);
+
+          const w1 = Math.sin(x * layer.freq1 + t * layer.speed * 45 + idx * 1.6 + Math.PI);
+          const w2 = Math.cos(x * layer.freq2 - t * layer.speed * 28 + Math.PI);
+          const displacement = (w1 * 0.65 + w2 * 0.35) * (effectiveAmp * 0.85) * envelope;
+
+          const y = centerY - displacement;
+          ctx.lineTo(x, y);
+        }
+
+        ctx.closePath();
+
+        // Gradient fill
+        const gradient = ctx.createLinearGradient(0, centerY - effectiveAmp, 0, centerY + effectiveAmp);
+        gradient.addColorStop(0, layer.colorTop);
+        gradient.addColorStop(1, layer.colorBottom);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        // Highlight stroke along crest
+        ctx.strokeStyle = layer.strokeColor;
+        ctx.lineWidth = layer.lineWidth;
+        ctx.stroke();
+      });
+
+      // Luminous center beam that pulses gently through the wave core
+      ctx.beginPath();
+      for (let x = 0; x <= width; x += 4) {
+        const normX = x / width;
+        const envelope = Math.pow(Math.sin(normX * Math.PI), 1.4);
+        const y = centerY + Math.sin(x * 0.018 + t * 1.6) * (currentAmp * 0.35) * envelope;
+        if (x === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      animFrameRef.current = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+      }
+      resizeObserver.disconnect();
+    };
+  }, [state, volumeLevel, isMicMuted]);
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={actionLabel}
-      className="relative flex min-h-28 w-full items-center justify-between gap-4 overflow-hidden rounded-xl bg-black/25 hover:bg-black/35 px-4 text-left rtl:text-right transition-colors sm:px-6 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white"
+    <div
+      className={`relative w-full h-24 overflow-hidden rounded-xl bg-black/25 backdrop-blur-[2px] flex items-center justify-center ${className}`}
+      aria-label="Voice Agent Live Wave"
     >
-      {/* Background wave ribbons in #2E8B57 */}
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 1000 100"
-        preserveAspectRatio="none"
-        className="pointer-events-none absolute inset-0 h-full w-full"
-      >
-        <path
-          d="M0 50 C95 50 128 28 220 43 C298 56 328 78 410 49 C496 18 532 12 612 47 C690 82 728 69 806 46 C881 24 923 50 1000 50 C923 50 881 76 806 54 C728 31 690 18 612 53 C532 88 496 82 410 51 C328 22 298 44 220 57 C128 72 95 50 0 50 Z"
-          fill="#2E8B57"
-          opacity="0.35"
-          className={state === "speaking" ? "voice-ribbon voice-ribbon-one" : ""}
-          style={state === "listening" ? { transform: `scaleY(${listeningScale})` } : undefined}
-        />
-        <path
-          d="M0 50 C104 50 150 38 237 47 C313 55 356 67 431 49 C506 31 548 25 620 48 C701 71 747 63 820 48 C892 33 946 50 1000 50 C946 50 892 67 820 52 C747 37 701 29 620 52 C548 75 506 69 431 51 C356 33 313 45 237 53 C150 62 104 50 0 50 Z"
-          fill="#2E8B57"
-          opacity="0.5"
-          className={state === "speaking" ? "voice-ribbon voice-ribbon-two" : ""}
-          style={state === "listening" ? { transform: `scaleY(${listeningScale})` } : undefined}
-        />
-        <path
-          d="M0 50 C124 50 172 44 258 49 C337 54 378 60 454 50 C532 40 575 35 650 50 C726 65 769 59 847 49 C918 40 960 50 1000 50 C960 50 918 60 847 51 C769 41 726 35 650 50 C575 65 532 60 454 50 C378 40 337 46 258 51 C172 56 124 50 0 50 Z"
-          fill="#2E8B57"
-          opacity="0.75"
-          className={state === "speaking" ? "voice-ribbon voice-ribbon-three" : ""}
-          style={state === "listening" ? { transform: `scaleY(${listeningScale})` } : undefined}
-        />
-      </svg>
-
-      {/* Left / Start: Status icon & labels */}
-      <div className="relative z-10 flex min-w-0 items-center gap-3.5 text-left rtl:text-right">
-        <span
-          className={`flex h-11 w-11 shrink-0 items-center justify-center text-white rounded-full transition-colors ${
-            state === "processing" ? "bg-[#78866B] animate-pulse" : isMicMuted ? "bg-[#78866B]" : "bg-[#2E8B57]"
-          }`}
-        >
-          {isMicMuted ? (
-            <MicOff className="h-5 w-5 text-white" />
-          ) : state === "processing" ? (
-            <Loader2 className="h-5 w-5 animate-spin text-white" />
-          ) : state === "speaking" ? (
-            <Volume2 className="h-5 w-5 text-white" />
-          ) : (
-            <Mic className="h-5 w-5 text-white" />
-          )}
-        </span>
-        <span className="min-w-0">
-          <span className="block text-sm font-extrabold text-white leading-tight">{statusLabel}</span>
-          {hintLabel && <span className="block text-xs font-semibold text-white/80 mt-0.5">{hintLabel}</span>}
-        </span>
-      </div>
-
-      {/* Dynamic Sound Equalizer Bars (STRICTLY in color #2E8B57) */}
-      <div className="relative z-10 flex items-center gap-1 sm:gap-1.5 h-12 px-2 shrink-0">
-        {[40, 75, 95, 60, 85, 50, 90, 65, 100, 70, 85, 45, 95, 55, 80, 60].map((h, i) => {
-          const isBarActive = state === "listening" ? volumeLevel > 4 : state === "speaking";
-          const scale =
-            state === "listening"
-              ? Math.max(0.2, (volumeLevel / 100) * (h / 65))
-              : state === "speaking"
-              ? Math.max(0.25, (Math.sin((i + 1) * 1.4) + 1.2) * 0.45)
-              : 0.22;
-
-          return (
-            <span
-              key={i}
-              className={`w-1 sm:w-1.5 rounded-full transition-all duration-150 bg-[#2E8B57] ${
-                isBarActive && state === "speaking" ? "animate-pulse" : ""
-              }`}
-              style={{
-                height: `${h * 0.38}px`,
-                transform: `scaleY(${scale})`,
-                animationDelay: `${i * 60}ms`,
-              }}
-            />
-          );
-        })}
-      </div>
-    </button>
+      <canvas
+        ref={canvasRef}
+        className="w-full h-full block pointer-events-none select-none"
+      />
+    </div>
   );
 }
