@@ -171,21 +171,21 @@ export default function VoiceSelector({
         </defs>
       </svg>
 
-      {/* Main Glassmorphic Showcase Stage */}
-      <div className="relative w-full rounded-3xl bg-black/25 backdrop-blur-md border border-white/10 p-6 sm:p-10 overflow-hidden shadow-2xl flex flex-col items-center">
-        {/* Subtle Ambient Background Glow matching the active voice */}
+      {/* Main Stage (Cleanly floating directly on the section background - No blurry card) */}
+      <div className="relative w-full flex flex-col items-center py-2 sm:py-4">
+        {/* Subtle Ambient Glow matching the active voice */}
         <div
-          className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full pointer-events-none filter blur-3xl opacity-30 transition-all duration-700"
+          className="absolute -top-12 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full pointer-events-none filter blur-3xl opacity-20 transition-all duration-700"
           style={{ backgroundColor: currentVoice.accentColor }}
         />
 
         {/* =======================================================
             1. The 3D Luminous Sphere Carousel (ElevenLabs Style)
            ======================================================= */}
-        <div className="relative w-full flex items-center justify-center gap-3 sm:gap-8 md:gap-12 py-6 sm:py-10 z-10">
+        <div className="relative w-full flex items-center justify-center gap-3 sm:gap-6 md:gap-10 py-4 sm:py-6 z-10">
           {/* Edge Left Ghost Orb (Subtle infinite depth feeling) */}
           <div
-            className="hidden lg:block w-14 h-14 xl:w-20 xl:h-20 rounded-full opacity-25 filter blur-[2px] transition-all duration-500 scale-90"
+            className="hidden sm:block w-10 h-10 sm:w-14 sm:h-14 rounded-full opacity-30 filter blur-[1.5px] transition-all duration-500 scale-90"
             style={{
               background: "radial-gradient(circle at 35% 30%, #e2e8f0 0%, #94a3b8 40%, #475569 85%, #0f172a 100%)",
             }}
@@ -198,10 +198,10 @@ export default function VoiceSelector({
             title={`${leftVoice.name} - ${leftVoice.categoryTag}`}
           >
             <div
-              className="w-24 h-24 sm:w-36 sm:h-36 md:w-44 md:h-44 rounded-full transition-all duration-500 relative opacity-70 group-hover:opacity-95"
+              className="w-18 h-18 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full transition-all duration-500 relative opacity-70 group-hover:opacity-95"
               style={{
                 background: leftVoice.gradient,
-                boxShadow: `0 15px 40px -10px ${leftVoice.glowColor}, ${leftVoice.innerShadow}`,
+                boxShadow: `0 12px 30px -8px ${leftVoice.glowColor}, ${leftVoice.innerShadow}`,
               }}
             >
               {/* Grain Texture Overlay */}
@@ -214,12 +214,12 @@ export default function VoiceSelector({
               />
             </div>
             {/* Short Tag Below Neighbor Orb */}
-            <span className="hidden sm:block text-xs font-normal text-white/60 mt-3 group-hover:text-white transition-colors">
+            <span className="hidden sm:block text-xs font-normal text-white/70 mt-2 group-hover:text-white transition-colors">
               {leftVoice.name}
             </span>
           </div>
 
-          {/* Center Active Orb (Hero) */}
+          {/* Center Active Orb (Hero - Compact & Sleek) */}
           <div
             onClick={() => toggleAudition(currentVoice.id)}
             className="group relative flex flex-col items-center cursor-pointer transition-all duration-500 z-20"
@@ -234,12 +234,12 @@ export default function VoiceSelector({
             )}
 
             <div
-              className={`w-40 h-40 sm:w-56 sm:h-56 md:w-64 md:h-64 rounded-full transition-all duration-500 relative flex items-center justify-center ${
+              className={`w-28 h-28 sm:w-36 sm:h-36 md:w-44 md:h-44 rounded-full transition-all duration-500 relative flex items-center justify-center ${
                 isCurrentPlaying ? "scale-105" : "hover:scale-102"
               }`}
               style={{
                 background: currentVoice.gradient,
-                boxShadow: `0 25px 70px -12px ${currentVoice.glowColor}, ${currentVoice.innerShadow}`,
+                boxShadow: `0 20px 50px -10px ${currentVoice.glowColor}, ${currentVoice.innerShadow}`,
               }}
             >
               {/* Grain Texture Overlay */}
@@ -251,17 +251,17 @@ export default function VoiceSelector({
                 }}
               />
 
-              {/* Central White Glass Play / Pause Button (ElevenLabs exact icon button) */}
+              {/* Central White Glass Play / Pause Button */}
               <button
                 type="button"
                 onClick={(e) => toggleAudition(currentVoice.id, e)}
                 aria-label={isCurrentPlaying ? "Pause audition" : "Play audition"}
-                className="relative z-30 w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white text-gray-900 shadow-2xl flex items-center justify-center transition-all duration-200 hover:scale-115 active:scale-95 cursor-pointer"
+                className="relative z-30 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white text-gray-900 shadow-2xl flex items-center justify-center transition-all duration-200 hover:scale-115 active:scale-95 cursor-pointer"
               >
                 {isCurrentPlaying ? (
-                  <Pause className="w-6 h-6 fill-gray-900 text-gray-900" />
+                  <Pause className="w-4 h-4 sm:w-5 sm:h-5 fill-gray-900 text-gray-900" />
                 ) : (
-                  <Play className="w-6 h-6 fill-gray-900 text-gray-900 ml-0.5" />
+                  <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-gray-900 text-gray-900 ml-0.5" />
                 )}
               </button>
             </div>
@@ -274,10 +274,10 @@ export default function VoiceSelector({
             title={`${rightVoice.name} - ${rightVoice.categoryTag}`}
           >
             <div
-              className="w-24 h-24 sm:w-36 sm:h-36 md:w-44 md:h-44 rounded-full transition-all duration-500 relative opacity-70 group-hover:opacity-95"
+              className="w-18 h-18 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full transition-all duration-500 relative opacity-70 group-hover:opacity-95"
               style={{
                 background: rightVoice.gradient,
-                boxShadow: `0 15px 40px -10px ${rightVoice.glowColor}, ${rightVoice.innerShadow}`,
+                boxShadow: `0 12px 30px -8px ${rightVoice.glowColor}, ${rightVoice.innerShadow}`,
               }}
             >
               {/* Grain Texture Overlay */}
@@ -290,14 +290,14 @@ export default function VoiceSelector({
               />
             </div>
             {/* Short Tag Below Neighbor Orb */}
-            <span className="hidden sm:block text-xs font-normal text-white/60 mt-3 group-hover:text-white transition-colors">
+            <span className="hidden sm:block text-xs font-normal text-white/70 mt-2 group-hover:text-white transition-colors">
               {rightVoice.name}
             </span>
           </div>
 
           {/* Edge Right Ghost Orb (Subtle infinite depth feeling) */}
           <div
-            className="hidden lg:block w-14 h-14 xl:w-20 xl:h-20 rounded-full opacity-25 filter blur-[2px] transition-all duration-500 scale-90"
+            className="hidden sm:block w-10 h-10 sm:w-14 sm:h-14 rounded-full opacity-30 filter blur-[1.5px] transition-all duration-500 scale-90"
             style={{
               background: "radial-gradient(circle at 35% 30%, #fef3c7 0%, #cbd5e1 40%, #64748b 85%, #0f172a 100%)",
             }}
@@ -307,20 +307,20 @@ export default function VoiceSelector({
         {/* =======================================================
             2. Information Block Below the Active Persona
            ======================================================= */}
-        <div className="relative z-10 w-full max-w-xl text-center space-y-2 mt-2">
+        <div className="relative z-10 w-full max-w-lg text-center space-y-1.5 mt-2">
           {/* Navigation Controls flanking the Persona Title */}
-          <div className="flex items-center justify-center gap-6">
+          <div className="flex items-center justify-center gap-5">
             <button
               type="button"
               onClick={handlePrev}
               aria-label="Previous voice"
-              className="p-2 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+              className="p-1.5 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
 
             <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => toggleAudition(currentVoice.id)}>
-              <h3 className="text-xl sm:text-2xl font-normal text-white tracking-tight">
+              <h3 className="text-lg sm:text-xl font-normal text-white tracking-tight">
                 {currentVoice.name}
               </h3>
               <ArrowUpRight className="w-4 h-4 text-white/70" />
@@ -346,9 +346,9 @@ export default function VoiceSelector({
         </div>
 
         {/* =======================================================
-            3. Bottom Category Selector Pills (ElevenLabs Footer Style)
+            3. Bottom Category Selector Pills (Cleanly Floating)
            ======================================================= */}
-        <div className="relative z-10 mt-8 pt-6 border-t border-white/10 w-full flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+        <div className="relative z-10 mt-5 w-full flex flex-wrap items-center justify-center gap-2 sm:gap-2.5">
           {voices.map((voice) => {
             const isSelected = selectedVoice === voice.id;
             const isPlaying = playingVoice === voice.id;
@@ -361,10 +361,10 @@ export default function VoiceSelector({
                   handleSelect(voice.id);
                   toggleAudition(voice.id);
                 }}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-normal transition-all duration-200 cursor-pointer ${
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-normal transition-all duration-200 cursor-pointer ${
                   isSelected
                     ? "bg-white text-gray-900 shadow-lg scale-105"
-                    : "bg-white/10 hover:bg-white/20 text-white/80 hover:text-white"
+                    : "bg-black/30 hover:bg-black/45 text-white/85 hover:text-white border border-white/15"
                 }`}
               >
                 {/* Micro Color Indicator Dot */}
