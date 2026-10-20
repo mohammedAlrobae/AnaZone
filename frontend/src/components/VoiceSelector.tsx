@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Play, Pause, ChevronLeft, ChevronRight, ArrowUpRight } from "lucide-react";
+import { Play, Pause, ChevronLeft, ChevronRight } from "lucide-react";
 import { getVoiceSampleUrl } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
@@ -303,11 +303,10 @@ export default function VoiceSelector({
               <ChevronLeft className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => toggleAudition(currentVoice.id)}>
-              <h3 className="text-lg sm:text-xl font-normal text-white tracking-tight">
+            <div className="flex items-center cursor-pointer" onClick={() => toggleAudition(currentVoice.id)}>
+              <h3 className="text-lg sm:text-xl font-medium text-white tracking-tight drop-shadow-md">
                 {currentVoice.name}
               </h3>
-              <ArrowUpRight className="w-4 h-4 text-white/70" />
             </div>
 
             <button
@@ -320,9 +319,9 @@ export default function VoiceSelector({
             </button>
           </div>
 
-          {/* Persona Tagline Description */}
+          {/* Persona Tagline Description - Solid white for high contrast and readability */}
           <p
-            className="text-white/85 text-xs sm:text-sm font-normal max-w-md mx-auto leading-relaxed px-4 drop-shadow-md"
+            className="text-white text-xs sm:text-sm font-medium max-w-md mx-auto leading-relaxed px-4 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
             dir={isRtl ? "rtl" : "ltr"}
           >
             {currentVoice.description}
