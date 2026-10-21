@@ -24,7 +24,7 @@ export default function Google3DRealMap({
           key={key}
           src="https://maps-docs-team.web.app/samples/3d-places-autocomplete/dist/"
           title="Google Maps Photorealistic 3D Globe with Place Names"
-          className="absolute -top-[140px] left-0 w-full h-[calc(100%+85px)] border-0 select-none"
+          className="absolute -top-[90px] left-0 w-full h-[calc(100%+90px)] border-0 select-none"
           allow="geolocation; accelerometer; gyroscope"
           loading="eager"
         />
