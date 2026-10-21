@@ -136,21 +136,6 @@ export default function Home() {
           />
         </div>
 
-        {/* Floating Title Overlay on Top-Left of the 3D Map */}
-        <div className="absolute top-5 left-5 z-20 pointer-events-none max-w-lg">
-          <div className="bg-black/75 backdrop-blur-md border border-white/15 rounded-2xl px-4 py-2.5 shadow-2xl pointer-events-auto space-y-0.5">
-            <h2 className="text-base sm:text-lg font-semibold text-white tracking-tight flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
-              <span>{language === "ar" ? "استكشاف كوكب الأرض ثلاثي الأبعاد" : "3D Planet Earth & World Exploration"}</span>
-            </h2>
-            <p className="text-white/75 text-xs">
-              {language === "ar"
-                ? "خريطة تفاعلية حية بدقة 3D من Google Maps Platform"
-                : "Interactive Photorealistic 3D Globe & Cities powered by Google Maps"}
-            </p>
-          </div>
-        </div>
-
         {/* Floating Pop-Up Chatbot on the right (Opens & closes easily) */}
         <PopupVoiceChat
           selectedVoice={selectedVoice}
