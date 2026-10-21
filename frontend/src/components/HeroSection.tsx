@@ -60,8 +60,8 @@ export default function HeroSection({ onScrollToAgent }: HeroSectionProps) {
         </div>
       </div>
 
-      {/* Smooth Bottom Fade Transition to Next Section */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 sm:h-48 bg-gradient-to-b from-transparent via-black/50 to-black pointer-events-none z-10" />
+      {/* Soft Bottom Fade Transition to Next Section */}
+      <div className="absolute bottom-0 left-0 right-0 h-24 sm:h-36 bg-gradient-to-b from-transparent via-black/25 to-black/60 pointer-events-none z-10" />
     </section>
   );
 }
