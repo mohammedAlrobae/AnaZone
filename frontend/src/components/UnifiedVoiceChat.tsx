@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
@@ -138,10 +138,12 @@ export default function UnifiedVoiceChat({
     };
   }, []);
 
-  // Scroll messages
+  // Scroll messages (only when conversation messages are active)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTextLoading, state]);
+    if (messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [messages, isTextLoading]);
 
   const setAgentState = useCallback((newState: AgentState) => {
     setState(newState);

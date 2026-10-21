@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Play, Pause, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getVoiceSampleUrl } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import FluidVoiceCircle, { FluidVoiceColors } from "@/components/FluidVoiceCircle";
 
 interface VoiceSelectorProps {
   selectedVoice: string;
@@ -16,10 +17,7 @@ interface VoiceProfileItem {
   role: string;
   description: string;
   categoryTag: string;
-  gradient: string;
-  glowColor: string;
-  accentColor: string;
-  innerShadow: string;
+  fluidColors: FluidVoiceColors;
 }
 
 export default function VoiceSelector({
@@ -39,11 +37,15 @@ export default function VoiceSelector({
       role: t.yasminRole,
       description: t.yasminDesc,
       categoryTag: isRtl ? "احترافي • هادئ" : "Professional • Calm",
-      // Iridescent pearlescent amethyst / violet / sky-cyan
-      gradient: "radial-gradient(circle at 35% 30%, #ffffff 0%, #f3e8ff 18%, #d8b4fe 38%, #a855f7 62%, #4c1d95 85%, #1e1b4b 100%)",
-      glowColor: "rgba(168, 85, 247, 0.45)",
-      accentColor: "#a855f7",
-      innerShadow: "inset 8px 8px 25px rgba(255, 255, 255, 0.7), inset -12px -12px 30px rgba(0, 0, 0, 0.5)",
+      // Azure Electric Blue with silky white swimming fluid wave (as shown in uploaded photo)
+      fluidColors: {
+        bgFrom: "#1d4ed8",
+        bgTo: "#2563eb",
+        waveColor: "rgba(255, 255, 255, 0.95)",
+        secondaryWave: "rgba(191, 219, 254, 0.8)",
+        glow: "rgba(37, 99, 235, 0.55)",
+        accent: "#3b82f6",
+      },
     },
     {
       id: "ahmed",
@@ -51,11 +53,15 @@ export default function VoiceSelector({
       role: t.ahmedRole,
       description: t.ahmedDesc,
       categoryTag: isRtl ? "ودود • خدمة عملاء" : "Friendly • Conversational",
-      // Luminous solar amber / glowing peach / flame orange (matching ElevenLabs center orb)
-      gradient: "radial-gradient(circle at 35% 30%, #ffffff 0%, #ffedd5 18%, #fdba74 38%, #f97316 62%, #c2410c 85%, #431407 100%)",
-      glowColor: "rgba(249, 115, 22, 0.55)",
-      accentColor: "#f97316",
-      innerShadow: "inset 8px 8px 25px rgba(255, 255, 255, 0.75), inset -12px -12px 30px rgba(0, 0, 0, 0.5)",
+      // Radiant Solar Coral/Flame with glowing white swimming fluid wave
+      fluidColors: {
+        bgFrom: "#c2410c",
+        bgTo: "#ea580c",
+        waveColor: "rgba(255, 255, 255, 0.95)",
+        secondaryWave: "rgba(254, 215, 170, 0.8)",
+        glow: "rgba(234, 88, 12, 0.55)",
+        accent: "#f97316",
+      },
     },
     {
       id: "tareq",
@@ -63,11 +69,15 @@ export default function VoiceSelector({
       role: t.tareqRole,
       description: t.tareqDesc,
       categoryTag: isRtl ? "حماسي • إعلاني" : "Energetic • Promotional",
-      // Deep cosmic obsidian / twilight violet bronze / twilight glow
-      gradient: "radial-gradient(circle at 35% 30%, #fef3c7 0%, #fde68a 15%, #d97706 35%, #78350f 60%, #1f2937 85%, #030712 100%)",
-      glowColor: "rgba(217, 119, 6, 0.45)",
-      accentColor: "#d97706",
-      innerShadow: "inset 8px 8px 25px rgba(255, 255, 255, 0.65), inset -12px -12px 30px rgba(0, 0, 0, 0.6)",
+      // Deep Cosmic Emerald/Teal with glowing white swimming fluid wave
+      fluidColors: {
+        bgFrom: "#0f766e",
+        bgTo: "#0d9488",
+        waveColor: "rgba(255, 255, 255, 0.95)",
+        secondaryWave: "rgba(153, 246, 228, 0.8)",
+        glow: "rgba(13, 148, 136, 0.55)",
+        accent: "#14b8a6",
+      },
     },
   ];
 
@@ -207,141 +217,58 @@ export default function VoiceSelector({
   return (
     <div className="w-full select-none" dir="ltr">
       {/* SVG Fine Noise Grain Filter for the ElevenLabs Spheres */}
-      <svg className="absolute w-0 h-0" aria-hidden="true">
-        <defs>
-          <filter id="eleven-sphere-grain" x="0%" y="0%" width="100%" height="100%">
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.75"
-              numOctaves="3"
-              stitchTiles="stitch"
-              result="noise"
-            />
-            <feColorMatrix
-              type="matrix"
-              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.17 0"
-              result="coloredNoise"
-            />
-            <feComposite in2="SourceGraphic" in="coloredNoise" operator="in" />
-          </filter>
-        </defs>
-      </svg>
-
-      {/* Main Stage (Cleanly floating directly on the section background - No blurry card) */}
+      {/* Main Stage */}
       <div className="relative w-full flex flex-col items-center py-2 sm:py-4">
         {/* Subtle Ambient Glow matching the active voice */}
         <div
-          className="absolute -top-12 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full pointer-events-none filter blur-3xl opacity-20 transition-all duration-700"
-          style={{ backgroundColor: currentVoice.accentColor }}
+          className="absolute -top-12 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full pointer-events-none filter blur-3xl opacity-25 transition-all duration-700"
+          style={{ backgroundColor: currentVoice.fluidColors.accent }}
         />
 
         {/* =======================================================
-            1. The 3D Luminous Sphere Carousel (Strictly 3 Personas)
+            1. Dynamic Fluid Voice Circles (GPT & ElevenLabs Motion)
            ======================================================= */}
-        <div className="relative w-full flex items-center justify-center gap-5 sm:gap-10 md:gap-16 py-4 sm:py-6 z-10">
-          {/* Left Neighbor Orb */}
-          <div
-            onClick={() => handleSelect(leftVoice.id)}
-            className="group relative flex flex-col items-center cursor-pointer transition-all duration-500 hover:scale-105 active:scale-95"
-            title={`${leftVoice.name} - ${leftVoice.categoryTag}`}
-          >
-            <div
-              className="w-20 h-20 sm:w-26 sm:h-26 md:w-32 md:h-32 rounded-full transition-all duration-500 relative opacity-75 group-hover:opacity-100"
-              style={{
-                background: leftVoice.gradient,
-                boxShadow: `0 14px 35px -8px ${leftVoice.glowColor}, ${leftVoice.innerShadow}`,
-              }}
-            >
-              {/* Grain Texture Overlay */}
-              <div
-                className="absolute inset-0 rounded-full mix-blend-overlay opacity-30 pointer-events-none"
-                style={{
-                  backgroundImage:
-                    "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.4) 0%, transparent 80%)",
-                }}
-              />
-            </div>
-            {/* Short Tag Below Neighbor Orb */}
-            <span className="text-xs sm:text-sm font-normal text-white/80 mt-2.5 group-hover:text-white transition-colors drop-shadow-sm">
-              {leftVoice.name}
-            </span>
-          </div>
+        <div className="relative w-full flex items-center justify-center gap-6 sm:gap-12 md:gap-16 py-4 sm:py-6 z-10">
+          {/* Left Neighbor Circle */}
+          <FluidVoiceCircle
+            id={leftVoice.id}
+            name={leftVoice.name}
+            categoryTag={leftVoice.categoryTag}
+            isSelected={false}
+            isPlaying={playingVoice === leftVoice.id}
+            colors={leftVoice.fluidColors}
+            size="neighbor"
+            onSelect={() => handleSelect(leftVoice.id)}
+            onTogglePlay={(e) => toggleAudition(leftVoice.id, e)}
+          />
 
-          {/* Center Active Orb (Hero - Selected Persona) */}
-          <div
-            onClick={() => toggleAudition(currentVoice.id)}
-            className="group relative flex flex-col items-center cursor-pointer transition-all duration-500 z-20"
-            title={isCurrentPlaying ? (isRtl ? "إيقاف المعاينة" : "Pause Sample") : (isRtl ? "استمع لصوت العينة" : "Play Sample Audition")}
-          >
-            {/* Audio Ripples when Playing */}
-            {isCurrentPlaying && (
-              <div
-                className="absolute inset-0 rounded-full animate-ping opacity-30 pointer-events-none"
-                style={{ backgroundColor: currentVoice.accentColor }}
-              />
-            )}
+          {/* Center Active Hero Circle */}
+          <FluidVoiceCircle
+            id={currentVoice.id}
+            name={currentVoice.name}
+            categoryTag={currentVoice.categoryTag}
+            isSelected={true}
+            isPlaying={isCurrentPlaying}
+            colors={currentVoice.fluidColors}
+            size="hero"
+            onSelect={() => toggleAudition(currentVoice.id)}
+            onTogglePlay={(e) => toggleAudition(currentVoice.id, e)}
+            playAriaLabel={isRtl ? "استمع لصوت العينة" : "Play sample"}
+            pauseAriaLabel={isRtl ? "إيقاف المعاينة" : "Pause sample"}
+          />
 
-            <div
-              className={`w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-full transition-all duration-500 relative flex items-center justify-center ${
-                isCurrentPlaying ? "scale-105" : "hover:scale-103"
-              }`}
-              style={{
-                background: currentVoice.gradient,
-                boxShadow: `0 22px 55px -10px ${currentVoice.glowColor}, ${currentVoice.innerShadow}`,
-              }}
-            >
-              {/* Grain Texture Overlay */}
-              <div
-                className="absolute inset-0 rounded-full mix-blend-overlay opacity-35 pointer-events-none"
-                style={{
-                  backgroundImage:
-                    "radial-gradient(circle at 40% 35%, rgba(255,255,255,0.5) 0%, transparent 75%)",
-                }}
-              />
-
-              {/* Central White Glass Play / Pause Button */}
-              <button
-                type="button"
-                onClick={(e) => toggleAudition(currentVoice.id, e)}
-                aria-label={isCurrentPlaying ? "Pause audition" : "Play audition"}
-                className="relative z-30 w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-white text-gray-900 shadow-2xl flex items-center justify-center transition-all duration-200 hover:scale-115 active:scale-95 cursor-pointer"
-              >
-                {isCurrentPlaying ? (
-                  <Pause className="w-4 h-4 sm:w-5 sm:h-5 fill-gray-900 text-gray-900" />
-                ) : (
-                  <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-gray-900 text-gray-900 ml-0.5" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Right Neighbor Orb */}
-          <div
-            onClick={() => handleSelect(rightVoice.id)}
-            className="group relative flex flex-col items-center cursor-pointer transition-all duration-500 hover:scale-105 active:scale-95"
-            title={`${rightVoice.name} - ${rightVoice.categoryTag}`}
-          >
-            <div
-              className="w-20 h-20 sm:w-26 sm:h-26 md:w-32 md:h-32 rounded-full transition-all duration-500 relative opacity-75 group-hover:opacity-100"
-              style={{
-                background: rightVoice.gradient,
-                boxShadow: `0 14px 35px -8px ${rightVoice.glowColor}, ${rightVoice.innerShadow}`,
-              }}
-            >
-              {/* Grain Texture Overlay */}
-              <div
-                className="absolute inset-0 rounded-full mix-blend-overlay opacity-30 pointer-events-none"
-                style={{
-                  backgroundImage:
-                    "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.4) 0%, transparent 80%)",
-                }}
-              />
-            </div>
-            {/* Short Tag Below Neighbor Orb */}
-            <span className="text-xs sm:text-sm font-normal text-white/80 mt-2.5 group-hover:text-white transition-colors drop-shadow-sm">
-              {rightVoice.name}
-            </span>
-          </div>
+          {/* Right Neighbor Circle */}
+          <FluidVoiceCircle
+            id={rightVoice.id}
+            name={rightVoice.name}
+            categoryTag={rightVoice.categoryTag}
+            isSelected={false}
+            isPlaying={playingVoice === rightVoice.id}
+            colors={rightVoice.fluidColors}
+            size="neighbor"
+            onSelect={() => handleSelect(rightVoice.id)}
+            onTogglePlay={(e) => toggleAudition(rightVoice.id, e)}
+          />
         </div>
 
         {/* =======================================================

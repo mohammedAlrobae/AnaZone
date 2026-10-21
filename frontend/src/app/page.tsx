@@ -5,8 +5,9 @@ import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import VoiceSelector from "@/components/VoiceSelector";
-import UnifiedVoiceChat from "@/components/UnifiedVoiceChat";
-import WorldMap, { LocationSelected } from "@/components/WorldMap";
+import Google3DRealMap from "@/components/Google3DRealMap";
+import PopupVoiceChat from "@/components/PopupVoiceChat";
+import { LocationSelected } from "@/components/WorldMap";
 import { ChatMessage, exploreLocation } from "@/lib/api";
 import { Mail } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
@@ -121,45 +122,43 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Section 3: Chat and Map Exploration Section (Background: for_chatANDmap.jpg) */}
+      {/* Section 3: The Real 3D Google Map IS the Section Background */}
       <section
         id="chat-and-map-section"
-        className="relative w-full text-white py-14 sm:py-20 px-6 sm:px-10 lg:px-16 overflow-hidden"
+        className="relative w-full h-[88vh] min-h-[680px] max-h-[920px] overflow-hidden bg-black p-0 m-0"
       >
-        {/* Background Image EXCLUSIVELY for Chat & Map (Aurora Borealis) */}
-        <div className="absolute inset-0 w-full h-full pointer-events-none select-none z-0">
-          <Image
-            src="/for_chatANDmap.jpg"
-            alt="Chat and Map Section Background"
-            fill
-            priority
-            className="object-cover object-center"
-            sizes="100vw"
+        {/* Full-Bleed 3D Map as the Section Background */}
+        <div className="absolute inset-0 w-full h-full z-0">
+          <Google3DRealMap
+            onLocationSelect={handleLocationSelect}
+            selectedLocation={selectedLocation}
+            isExploring={isExploring}
           />
-          <div className="absolute inset-0 bg-black/25" />
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-            <div className="lg:col-span-5 h-[580px] min-h-0 w-full">
-              <UnifiedVoiceChat
-                selectedVoice={selectedVoice}
-                messages={messages}
-                onSendMessage={handleNewMessage}
-                activeLocation={selectedLocation}
-                agentSpeakingAudio={agentSpeakingAudio}
-              />
-            </div>
-
-            <div className="lg:col-span-7 h-[580px] min-h-0 w-full">
-              <WorldMap
-                onLocationSelect={handleLocationSelect}
-                selectedLocation={selectedLocation}
-                isExploring={isExploring}
-              />
-            </div>
+        {/* Floating Title Overlay on Top-Left of the 3D Map */}
+        <div className="absolute top-5 left-5 z-20 pointer-events-none max-w-lg">
+          <div className="bg-black/75 backdrop-blur-md border border-white/15 rounded-2xl px-4 py-2.5 shadow-2xl pointer-events-auto space-y-0.5">
+            <h2 className="text-base sm:text-lg font-semibold text-white tracking-tight flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+              <span>{language === "ar" ? "استكشاف كوكب الأرض ثلاثي الأبعاد" : "3D Planet Earth & World Exploration"}</span>
+            </h2>
+            <p className="text-white/75 text-xs">
+              {language === "ar"
+                ? "خريطة تفاعلية حية بدقة 3D من Google Maps Platform"
+                : "Interactive Photorealistic 3D Globe & Cities powered by Google Maps"}
+            </p>
           </div>
         </div>
+
+        {/* Floating Pop-Up Chatbot on the right (Opens & closes easily) */}
+        <PopupVoiceChat
+          selectedVoice={selectedVoice}
+          messages={messages}
+          onSendMessage={handleNewMessage}
+          activeLocation={selectedLocation}
+          agentSpeakingAudio={agentSpeakingAudio}
+        />
       </section>
 
       <footer className="w-full bg-[#2E8B57] py-5 px-6 text-white">

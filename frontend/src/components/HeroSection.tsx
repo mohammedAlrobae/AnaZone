@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { ArrowDown } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import RealisticRain from "@/components/RealisticRain";
 
 interface HeroSectionProps {
   onScrollToAgent: () => void;
@@ -25,6 +26,9 @@ export default function HeroSection({ onScrollToAgent }: HeroSectionProps) {
           sizes="100vw"
         />
       </div>
+
+      {/* Realistic Multi-Layer Rain Animation (Rainforest Atmosphere) */}
+      <RealisticRain intensity="medium" windAngleDeg={8} />
 
       {/* Content strictly on the LEFT side so the panda on the right remains completely visible */}
       <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 w-full flex items-center pt-20 pb-12">
