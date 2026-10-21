@@ -80,7 +80,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen w-full flex flex-col font-sans bg-[#2e8b57] text-white">
+    <main className="min-h-screen w-full flex flex-col font-sans bg-black text-white">
       {/* 1. Top Navbar: Logo, Language Toggle, ABOUT, CONTACT */}
       <Navbar />
 
@@ -146,16 +146,16 @@ export default function Home() {
         />
       </section>
 
-      <footer className="w-full bg-[#2E8B57] py-5 px-6 text-white">
+      <footer className="w-full bg-black border-t border-white/10 py-5 px-6 text-white">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs sm:text-sm">
-          <span className="font-normal tracking-wide text-white">
+          <span className="font-normal tracking-wide text-white/90">
             {t.footerBrand}
           </span>
 
           <div className="flex items-center gap-4 font-normal">
             <a
               href="mailto:moalrobae@gmail.com"
-              className="flex items-center gap-1.5 text-white hover:text-[#2e8b57] transition-colors"
+              className="flex items-center gap-1.5 text-white/80 hover:text-white transition-colors"
             >
               <Mail className="w-3.5 h-3.5" />
               <span>moalrobae@gmail.com</span>

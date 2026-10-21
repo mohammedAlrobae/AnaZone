@@ -10,7 +10,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="absolute top-0 left-0 right-0 z-50 bg-[#2E8B57] transition-colors duration-200">
+      <header className="absolute top-0 left-0 right-0 z-50 bg-black border-b border-white/10 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo / Brand Name */}
           <div className="flex items-center gap-2.5">
@@ -55,11 +55,11 @@ export default function Navbar() {
 
       {/* About Modal */}
       {aboutOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
-          <div className="bg-[#2E8B57] rounded-xl text-white p-8 max-w-xl w-full relative max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#18181b] border border-white/15 rounded-xl text-white p-8 max-w-xl w-full relative max-h-[85vh] overflow-y-auto shadow-2xl">
             <button
               onClick={() => setAboutOpen(false)}
-              className="absolute top-5 right-5 rtl:left-5 rtl:right-auto p-2 rounded-lg text-white hover:bg-[#78866B]/40 transition-colors cursor-pointer"
+              className="absolute top-5 right-5 rtl:left-5 rtl:right-auto p-2 rounded-lg text-white hover:bg-white/10 transition-colors cursor-pointer"
               aria-label="Close"
             >
               <X className="w-5 h-5 text-white" />
@@ -72,7 +72,7 @@ export default function Navbar() {
             </p>
             <button
               onClick={() => setAboutOpen(false)}
-              className="w-full py-3 rounded-lg bg-[#78866B] text-white font-normal hover:bg-[#636f58] transition-colors cursor-pointer"
+              className="w-full py-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-normal transition-colors cursor-pointer border border-white/10"
             >
               {t.close}
             </button>
