@@ -626,11 +626,11 @@ export default function UnifiedVoiceChat({
           {!isConnected ? (
             <button
               onClick={() => void connectAgent()}
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer outline-none"
-              title={language === "ar" ? "╪º╪¬╪╡╪º┘ä ╪¿╪º┘ä┘ê┘â┘è┘ä" : "Connect Agent"}
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-white/90 hover:text-white transition-colors cursor-pointer outline-none"
+              title={language === "ar" ? "اتصال بالوكيل" : "Connect Agent"}
             >
-              <Sparkles className="w-3 h-3 text-emerald-400" />
-              <span>{language === "ar" ? "╪º╪¬╪╡╪º┘ä" : "Connect"}</span>
+              <Sparkles className="w-3 h-3 text-white" />
+              <span>{language === "ar" ? "اتصال" : "Connect"}</span>
             </button>
           ) : (
             <button
@@ -676,7 +676,7 @@ export default function UnifiedVoiceChat({
               className={`flex gap-2.5 ${isUser ? "justify-end" : "justify-start"}`}
             >
               {!isUser && (
-                <div className="w-7 h-7 rounded-full bg-[#2e8b57] text-white flex items-center justify-center shrink-0 mt-0.5">
+                <div className="w-7 h-7 rounded-full bg-zinc-900 border border-white/20 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
                   <Volume2 className="w-3.5 h-3.5 text-white" />
                 </div>
               )}
@@ -684,8 +684,8 @@ export default function UnifiedVoiceChat({
               <div
                 className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed ${
                   isUser
-                    ? "bg-[#2e8b57] text-white font-normal rounded-xl rounded-tr-none"
-                    : "bg-black/35 text-white font-normal rounded-xl rounded-tl-none"
+                    ? "bg-zinc-900 border border-white/20 text-white font-normal rounded-xl rounded-tr-none shadow-sm"
+                    : "bg-black/60 border border-white/10 text-white font-normal rounded-xl rounded-tl-none"
                 }`}
                 dir="auto"
               >
@@ -696,7 +696,7 @@ export default function UnifiedVoiceChat({
                   <div className="mt-2.5 pt-1 flex items-center justify-between">
                     <button
                       onClick={() => playAudio(msg.audioBase64!, index)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#2e8b57] hover:bg-[#257347] text-white font-normal text-xs transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-normal text-xs transition-colors cursor-pointer border border-white/20"
                     >
                       {isAudioPlaying ? (
                         <>
@@ -715,7 +715,7 @@ export default function UnifiedVoiceChat({
               </div>
 
               {isUser && (
-                <div className="w-7 h-7 rounded-full bg-[#2e8b57] text-white flex items-center justify-center shrink-0 mt-0.5">
+                <div className="w-7 h-7 rounded-full bg-zinc-800 border border-white/20 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
                   <User className="w-3.5 h-3.5 text-white" />
                 </div>
               )}
@@ -725,7 +725,7 @@ export default function UnifiedVoiceChat({
 
         {liveTranscript && (
           <div className="flex justify-end" aria-live="polite">
-            <div className="max-w-[85%] rounded-xl bg-[#2e8b57]/30 px-4 py-3 text-sm leading-relaxed text-white">
+            <div className="max-w-[85%] rounded-xl bg-zinc-900/80 border border-white/20 px-4 py-3 text-sm leading-relaxed text-white">
               <p className="whitespace-pre-wrap" dir="auto">{liveTranscript}</p>
             </div>
           </div>
@@ -733,7 +733,7 @@ export default function UnifiedVoiceChat({
 
         {isTextLoading && (
           <div className="flex gap-2.5 justify-start">
-            <div className="w-7 h-7 rounded-full bg-[#2e8b57] text-white flex items-center justify-center shrink-0">
+            <div className="w-7 h-7 rounded-full bg-zinc-900 border border-white/20 text-white flex items-center justify-center shrink-0">
               <Volume2 className="w-3.5 h-3.5 text-white" />
             </div>
             <div className="bg-black/35 px-4 py-2.5 text-xs text-white flex items-center gap-2 rounded-xl rounded-tl-none">
@@ -820,7 +820,7 @@ export default function UnifiedVoiceChat({
         <button
           type="submit"
           disabled={!inputText.trim() || isTextLoading || state === "thinking"}
-          className="bg-[#2e8b57] hover:bg-[#257347] disabled:opacity-40 text-white p-2.5 rounded-lg cursor-pointer transition-colors shrink-0 outline-none focus:outline-none focus:ring-0"
+          className="bg-black hover:bg-zinc-800 border border-white/20 disabled:opacity-40 text-white p-2.5 rounded-lg cursor-pointer transition-colors shrink-0 outline-none focus:outline-none focus:ring-0 shadow-sm"
           title="Send"
         >
           <Send className="w-4 h-4 text-white" />

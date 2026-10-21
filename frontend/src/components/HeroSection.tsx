@@ -47,7 +47,7 @@ export default function HeroSection({ onScrollToAgent }: HeroSectionProps) {
           <div className="flex flex-col items-start rtl:items-start gap-3">
             <button
               onClick={onScrollToAgent}
-              className="group flex items-center gap-3 px-7 py-3.5 rounded-xl bg-[#2e8b57] text-white hover:bg-[#257347] border border-white font-normal text-base sm:text-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl cursor-pointer"
+              className="group flex items-center gap-3 px-7 py-3.5 rounded-xl bg-black/90 text-white hover:bg-zinc-900 border border-white/60 hover:border-white font-normal text-base sm:text-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-2xl cursor-pointer backdrop-blur-md"
               aria-label="Jump to voice agent section"
             >
               <span>{t.heroCta}</span>

@@ -63,16 +63,16 @@ export default function DynamicVoiceWave({
       resizeObserver.observe(canvas.parentElement);
     }
 
-    // Layer definitions with distinct harmonic speeds, frequencies, and transparencies in approved #2E8B57 palette
+    // Layer definitions with distinct harmonic speeds, frequencies, and transparencies in sleek monochrome palette
     const layers = [
       {
         freq1: 0.009,
         freq2: 0.018,
         speed: 0.022,
         ampFactor: 0.65,
-        colorTop: "rgba(46, 139, 87, 0.40)",
-        colorBottom: "rgba(46, 139, 87, 0.08)",
-        strokeColor: "rgba(46, 139, 87, 0.55)",
+        colorTop: "rgba(255, 255, 255, 0.22)",
+        colorBottom: "rgba(255, 255, 255, 0.04)",
+        strokeColor: "rgba(255, 255, 255, 0.45)",
         lineWidth: 1.5,
       },
       {
@@ -80,9 +80,9 @@ export default function DynamicVoiceWave({
         freq2: 0.026,
         speed: 0.032,
         ampFactor: 0.85,
-        colorTop: "rgba(46, 139, 87, 0.55)",
-        colorBottom: "rgba(46, 139, 87, 0.12)",
-        strokeColor: "rgba(46, 139, 87, 0.75)",
+        colorTop: "rgba(255, 255, 255, 0.35)",
+        colorBottom: "rgba(255, 255, 255, 0.08)",
+        strokeColor: "rgba(255, 255, 255, 0.65)",
         lineWidth: 2,
       },
       {
@@ -90,9 +90,9 @@ export default function DynamicVoiceWave({
         freq2: 0.032,
         speed: 0.042,
         ampFactor: 1.05,
-        colorTop: "rgba(52, 168, 98, 0.70)",
-        colorBottom: "rgba(46, 139, 87, 0.18)",
-        strokeColor: "rgba(120, 220, 160, 0.95)",
+        colorTop: "rgba(255, 255, 255, 0.50)",
+        colorBottom: "rgba(255, 255, 255, 0.12)",
+        strokeColor: "rgba(255, 255, 255, 0.90)",
         lineWidth: 2.5,
       },
     ];

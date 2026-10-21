@@ -115,16 +115,16 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
 
 :root {
   --font-dm-sans: 'DM Sans', sans-serif;
-  --color-primary: #2E8B57;
-  --color-secondary: #2E8B57;
-  --color-accent: #78866B;
+  --color-primary: #000000;
+  --color-secondary: #000000;
+  --color-accent: #27272a;
   --color-white: #ffffff;
 }
 
 body, html {
   font-family: 'DM Sans', var(--font-dm-sans), sans-serif;
   font-weight: 400;
-  background-color: #2E8B57;
+  background-color: #000000;
   color: #ffffff;
   overflow-x: hidden;
 }
@@ -149,14 +149,14 @@ button {
 }
 
 ::-webkit-scrollbar-track {
-  background: #2E8B57;
+  background: #000000;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #78866B;
+  background: #27272a;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #636f58;
+  background: #3f3f46;
 }
