@@ -19,12 +19,12 @@ export default function Google3DRealMap({
   return (
     <div className="w-full h-full relative overflow-hidden bg-black select-none">
       {/* Real Google Maps 3D Live Engine: Orbital Planet Earth Globe with country & place labels, zero click popups */}
-      <div className="relative w-full h-full bg-black overflow-hidden">
+      <div className="relative w-full h-full bg-black overflow-hidden select-none">
         <iframe
           key={key}
           src="https://maps-docs-team.web.app/samples/3d-places-autocomplete/dist/"
           title="Google Maps Photorealistic 3D Globe with Place Names"
-          className="absolute -top-[90px] left-0 w-full h-[calc(100%+90px)] border-0 select-none"
+          className="absolute -top-[145px] left-0 w-full h-[calc(100%+290px)] border-0 select-none"
           allow="geolocation; accelerometer; gyroscope"
           loading="eager"
         />

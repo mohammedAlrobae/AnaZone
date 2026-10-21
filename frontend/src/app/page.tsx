@@ -145,9 +145,6 @@ export default function Home() {
         {/* Top Fade from Voice Selection Section into Space Globe */}
         <div className="absolute top-0 left-0 right-0 h-28 sm:h-40 bg-gradient-to-b from-black via-black/60 to-transparent pointer-events-none z-10" />
 
-        {/* Bottom Fade into the Footer */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 sm:h-36 bg-gradient-to-b from-transparent via-black/70 to-black pointer-events-none z-10" />
-
         {/* Floating Pop-Up Chatbot on the right (Opens & closes easily) */}
         <PopupVoiceChat
           selectedVoice={selectedVoice}
