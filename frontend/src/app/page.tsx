@@ -105,6 +105,12 @@ export default function Home() {
           />
         </div>
 
+        {/* Top Fade from Hero Section */}
+        <div className="absolute top-0 left-0 right-0 h-28 sm:h-40 bg-gradient-to-b from-black via-black/50 to-transparent pointer-events-none z-10" />
+
+        {/* Bottom Fade into 3D Map Section */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 sm:h-48 bg-gradient-to-b from-transparent via-black/60 to-black pointer-events-none z-10" />
+
         <div className="relative z-10 max-w-7xl mx-auto space-y-8">
           <div className="max-w-3xl">
             <h2 className="text-3xl sm:text-5xl font-normal text-white tracking-tight mb-3">
@@ -135,6 +141,12 @@ export default function Home() {
             isExploring={isExploring}
           />
         </div>
+
+        {/* Top Fade from Voice Selection Section into Space Globe */}
+        <div className="absolute top-0 left-0 right-0 h-28 sm:h-40 bg-gradient-to-b from-black via-black/60 to-transparent pointer-events-none z-10" />
+
+        {/* Bottom Fade into the Footer */}
+        <div className="absolute bottom-0 left-0 right-0 h-24 sm:h-36 bg-gradient-to-b from-transparent via-black/70 to-black pointer-events-none z-10" />
 
         {/* Floating Pop-Up Chatbot on the right (Opens & closes easily) */}
         <PopupVoiceChat
