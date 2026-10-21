@@ -39,16 +39,18 @@ export default function Google3DRealMap({
         </button>
       </div>
 
-      {/* Real Google Maps 3D Live Engine with HYBRID Mode (Place names, streets & countries visible, NO hotel markers) */}
-      <div className="relative w-full h-full bg-black">
+      {/* Real Google Maps 3D Live Engine: Orbital Planet Earth Globe with country & place labels, zero click popups */}
+      <div className="relative w-full h-full bg-black overflow-hidden">
         <iframe
           key={key}
-          src="https://maps-docs-team.web.app/samples/3d-simple-map/dist/"
+          src="https://maps-docs-team.web.app/samples/3d-places-autocomplete/dist/"
           title="Google Maps Photorealistic 3D Globe with Place Names"
-          className="w-full h-full border-0 select-none"
+          className="absolute -top-[140px] left-0 w-full h-[calc(100%+140px)] border-0 select-none"
           allow="geolocation; accelerometer; gyroscope"
           loading="eager"
         />
+        {/* Top-left backdrop mask to guarantee search box is 100% invisible */}
+        <div className="absolute top-0 left-0 w-[500px] h-20 bg-black pointer-events-none z-10" />
       </div>
     </div>
   );
