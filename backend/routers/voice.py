@@ -27,8 +27,8 @@ class ExploreLocationRequest(BaseModel):
     location_name: str
     country: Optional[str] = ""
     city: Optional[str] = ""
-    lat: float
-    lng: float
+    lat: Optional[float] = 0.0
+    lng: Optional[float] = 0.0
     voice: Optional[str] = DEFAULT_VOICE
     is_muted: Optional[bool] = False
     language: Optional[str] = "ar"
@@ -175,12 +175,15 @@ def explore_location(req: ExploreLocationRequest):
         if req.country and req.country not in req.location_name:
             loc_str += f", {req.country}"
 
+        latitude = req.lat if req.lat is not None else 0.0
+        longitude = req.lng if req.lng is not None else 0.0
+
         if is_ar:
             prompt = (
                 f"أنت مرشد جغرافي ومستكشف سياحي ممتع جداً في تطبيق استكشاف العالم.\n"
                 f"نقر المستخدم على الخريطة عند هذا الموقع:\n"
                 f"- المكان: {loc_str}\n"
-                f"- الإحداثيات: {req.lat:.4f}, {req.lng:.4f}\n\n"
+                f"- الإحداثيات: {latitude:.4f}, {longitude:.4f}\n\n"
                 f"المطلوب منك:\n"
                 f"قدّم نبذة شيقة وجذابة وموجزة جداً (جملتين إلى ثلاث جمل فقط) عن هذا المكان بالعامية المصرية الودية اللطيفة.\n"
                 f"تحدث عن أهم ما يميّزه (تاريخ، أو معالم، أو ثقافة، أو معلومة ممتعة)، واختم بسؤال ودي يدعو المستخدم لسؤالك أو استكشاف تفاصيل أكثر.\n"
@@ -191,7 +194,7 @@ def explore_location(req: ExploreLocationRequest):
                 f"You are a friendly, knowledgeable world geography explorer and travel guide.\n"
                 f"The user clicked this location on the world map:\n"
                 f"- Location: {loc_str}\n"
-                f"- Coordinates: {req.lat:.4f}, {req.lng:.4f}\n\n"
+                f"- Coordinates: {latitude:.4f}, {longitude:.4f}\n\n"
                 f"Provide a captivating, educational, and concise 2-3 sentence introduction about this place in a warm, engaging tone.\n"
                 f"Highlight what makes it unique (landmarks, geography, or fascinating history), and end with an inviting question inviting the user to ask deeper questions.\n"
                 f"Important: Do not use emojis, asterisks (*), or markdown tables as this text will be directly spoken aloud by TTS."

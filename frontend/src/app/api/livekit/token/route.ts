@@ -2,12 +2,11 @@ import { AccessToken } from 'livekit-server-sdk';
 import { NextRequest, NextResponse } from 'next/server';
 
 
-export const dynamic = 'force-dynamic';
-
 export async function GET(req: NextRequest) {
   try {
-    const room = req.nextUrl.searchParams.get('room') || 'anazone-room';
-    const username = req.nextUrl.searchParams.get('username') || `user_${Math.floor(Math.random() * 100000)}`;
+    const url = new URL(req.url);
+    const room = url.searchParams.get('room') || 'anazone-room';
+    const username = url.searchParams.get('username') || `user_${Math.floor(Math.random() * 100000)}`;
 
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
