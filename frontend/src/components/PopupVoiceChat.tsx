@@ -100,25 +100,15 @@ export default function PopupVoiceChat({
               </div>
             </div>
 
-            {/* Close / Minimize Controls */}
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => onOpenChange(false)}
-                title={language === "ar" ? "تصغير المحادثة" : "Minimize Chat"}
-                className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              >
-                <Minus className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onOpenChange(false)}
-                title={language === "ar" ? "إغلاق" : "Close"}
-                className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+            {/* Close Control */}
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              title={language === "ar" ? "إغلاق" : "Close"}
+              className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Unified Voice Chat Body */}

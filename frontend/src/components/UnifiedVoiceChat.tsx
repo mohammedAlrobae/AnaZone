@@ -615,78 +615,93 @@ export default function UnifiedVoiceChat({
 
   return (
     <div className="w-full h-full min-h-0 overflow-hidden bg-black/15 backdrop-blur-[3px] rounded-xl p-5 sm:p-6 flex flex-col relative text-white">
-      {/* 1. Voice Agent Header: Status & Connection Pill */}
+      {/* 1. Voice Agent Header: Single Interactive Connect / Disconnect Action Pill & Wave */}
       <div className="w-full shrink-0 flex flex-col items-center justify-center pt-0.5 pb-1">
-        <div className="flex items-center gap-2 mb-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm text-xs font-medium tracking-wide transition-all duration-300">
-          {/* Status Indicator Dot */}
-          <span
-            className={`w-2 h-2 rounded-full transition-colors duration-300 ${
-              state === "disconnected"
-                ? "bg-[#ff2222] shadow-[0_0_8px_#ff2222]"
+        <div className="w-full flex items-center justify-center gap-2 mb-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              if (isConnected) {
+                void disconnectAgent();
+              } else {
+                void connectAgent();
+              }
+            }}
+            disabled={state === "connecting"}
+            title={
+              !isConnected
+                ? (language === "ar" ? "انقر للاتصال بالوكيل" : "Click to connect")
+                : (language === "ar" ? "انقر لقطع الاتصال" : "Click to disconnect")
+            }
+            className={`group flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-medium tracking-wide transition-all duration-200 cursor-pointer backdrop-blur-md outline-none select-none ${
+              !isConnected
+                ? "bg-white/5 hover:bg-white/10 border-white/15 text-white/90 hover:text-white hover:scale-105 active:scale-95"
                 : state === "connecting"
-                ? "bg-[#1eff00] shadow-[0_0_8px_#1eff00] animate-pulse"
-                : state === "ready"
-                ? "bg-[#10b981] shadow-[0_0_8px_#10b981]"
-                : state === "listening"
-                ? "bg-[#ff5500] shadow-[0_0_8px_#ff5500] animate-pulse"
-                : state === "thinking"
-                ? "bg-[#ff00e1] shadow-[0_0_8px_#ff00e1] animate-pulse"
-                : "bg-[#0026ff] shadow-[0_0_8px_#0026ff] animate-pulse"
+                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300 cursor-wait"
+                : "bg-emerald-500/15 hover:bg-red-500/20 border-emerald-500/30 hover:border-red-500/40 text-emerald-300 hover:text-red-300 hover:scale-105 active:scale-95"
             }`}
-          />
+          >
+            {/* Status Indicator Dot */}
+            <span
+              className={`w-2 h-2 rounded-full transition-colors duration-300 ${
+                state === "disconnected"
+                  ? "bg-[#ff2222] shadow-[0_0_8px_#ff2222]"
+                  : state === "connecting"
+                  ? "bg-[#1eff00] shadow-[0_0_8px_#1eff00] animate-pulse"
+                  : state === "ready"
+                  ? "bg-[#10b981] shadow-[0_0_8px_#10b981] group-hover:bg-red-400 group-hover:shadow-[0_0_8px_#ef4444]"
+                  : state === "listening"
+                  ? "bg-[#ff5500] shadow-[0_0_8px_#ff5500] animate-pulse"
+                  : state === "thinking"
+                  ? "bg-[#ff00e1] shadow-[0_0_8px_#ff00e1] animate-pulse"
+                  : "bg-[#0026ff] shadow-[0_0_8px_#0026ff] animate-pulse"
+              }`}
+            />
 
-          {/* Status Text */}
-          <span className="text-white/85 select-none text-[11px] sm:text-xs">
-            {state === "disconnected"
-              ? (language === "ar" ? "غير متصل" : "Disconnected")
-              : state === "connecting"
-              ? (language === "ar" ? "جارٍ الاتصال..." : "Connecting...")
-              : state === "ready"
-              ? (language === "ar" ? "جاهز للمحادثة" : "Agent Ready")
-              : state === "listening"
-              ? (language === "ar" ? "جارٍ الاستماع..." : "Listening...")
-              : state === "thinking"
-              ? (language === "ar" ? "جارٍ التفكير..." : "Thinking...")
-              : (language === "ar" ? "يتحدث الآن..." : "Speaking...")}
-          </span>
+            {/* Unified Text & Action */}
+            <span className="text-[11px] sm:text-xs">
+              {!isConnected ? (
+                <span>{language === "ar" ? "اتصال" : "Connect"}</span>
+              ) : state === "connecting" ? (
+                <span>{language === "ar" ? "جارٍ الاتصال..." : "Connecting..."}</span>
+              ) : (
+                <>
+                  <span className="group-hover:hidden">
+                    {state === "ready"
+                      ? (language === "ar" ? "متصل" : "Connected")
+                      : state === "listening"
+                      ? (language === "ar" ? "جارٍ الاستماع..." : "Listening...")
+                      : state === "thinking"
+                      ? (language === "ar" ? "جارٍ التفكير..." : "Thinking...")
+                      : (language === "ar" ? "يتحدث..." : "Speaking...")}
+                  </span>
+                  <span className="hidden group-hover:inline">
+                    {language === "ar" ? "قطع الاتصال" : "Disconnect"}
+                  </span>
+                </>
+              )}
+            </span>
 
-          <span className="w-px h-3.5 bg-white/20 mx-0.5" />
-
-          {/* Connect / Disconnect Action Button */}
-          {!isConnected ? (
-            <button
-              onClick={() => void connectAgent()}
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-white/90 hover:text-white transition-colors cursor-pointer outline-none"
-              title={language === "ar" ? "اتصال بالوكيل" : "Connect Agent"}
-            >
-              <Sparkles className="w-3 h-3 text-white" />
-              <span>{language === "ar" ? "اتصال" : "Connect"}</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => void disconnectAgent()}
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400/90 hover:text-red-300 transition-colors cursor-pointer outline-none"
-              title={language === "ar" ? "قطع الاتصال" : "Disconnect"}
-            >
-              <Power className="w-3 h-3 text-red-400/90" />
-              <span>{language === "ar" ? "قطع الاتصال" : "Disconnect"}</span>
-            </button>
-          )}
+            <Power
+              className={`w-3 h-3 transition-colors ${
+                !isConnected
+                  ? "text-white/60 group-hover:text-white"
+                  : "text-emerald-400 group-hover:text-red-400"
+              }`}
+            />
+          </button>
 
           {/* Clear Chat Button */}
           {dedupedMessages.length > 0 && onClearChat && (
-            <>
-              <span className="w-px h-3.5 bg-white/20 mx-0.5" />
-              <button
-                type="button"
-                onClick={handleClearChatClick}
-                className="inline-flex items-center gap-1 text-[11px] font-medium text-white/60 hover:text-white transition-colors cursor-pointer outline-none"
-                title={language === "ar" ? "مسح المحادثة" : "Clear Chat"}
-              >
-                <Trash2 className="w-3 h-3 text-white/60 hover:text-white" />
-                <span className="hidden sm:inline">{language === "ar" ? "مسح" : "Clear"}</span>
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={handleClearChatClick}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-medium text-white/60 hover:text-white transition-all cursor-pointer outline-none hover:scale-105 active:scale-95"
+              title={language === "ar" ? "مسح المحادثة" : "Clear Chat"}
+            >
+              <Trash2 className="w-3 h-3" />
+              <span className="hidden sm:inline">{language === "ar" ? "مسح" : "Clear"}</span>
+            </button>
           )}
         </div>
 
