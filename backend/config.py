@@ -17,10 +17,12 @@ CLOUDFLARE_API_TOKEN = get_env("CLOUDFLARE_API_TOKEN")
 CLOUDFLARE_ACCOUNT_ID = get_env("CLOUDFLARE_ACCOUNT_ID")
 CLOUDFLARE_WHISPER_MODEL = get_env("CLOUDFLARE_WHISPER_MODEL", "@cf/openai/whisper")
 
-# LLM Configuration
-LLM_API_URL = get_env("LLM_API_URL", "http://127.0.0.1:4000/v1/chat/completions")
-LLM_MODEL = get_env("LLM_MODEL", "claude-sonnet-9")
-LLM_API_KEY = get_env("LLM_API_KEY", "none")
+# Groq Cloud LLM Configuration
+GROQ_API_KEY = get_env("cloud_groq_api") or get_env("GROQ_API_KEY")
+LLM_API_URL = get_env("LLM_API_URL", "https://api.groq.com/openai/v1/chat/completions")
+LLM_MODEL = get_env("LLM_MODEL", "openai/gpt-oss-120b")
+LLM_FALLBACK_MODEL = get_env("LLM_FALLBACK_MODEL", "qwen/qwen3.8-27b")
+LLM_API_KEY = GROQ_API_KEY or get_env("LLM_API_KEY", "")
 
 # HuggingFace & VoiceTut-TTS Configuration
 HF_TOKEN = get_env("HF_TOKEN")
