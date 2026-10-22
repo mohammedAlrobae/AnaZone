@@ -30,13 +30,6 @@ export default function PopupVoiceChat({
 }: PopupVoiceChatProps) {
   const { language } = useI18n();
 
-  // Auto-open chat popup when user clicks a location to explore or agent speaks
-  React.useEffect(() => {
-    if (activeLocation || agentSpeakingAudio) {
-      onOpenChange(true);
-    }
-  }, [activeLocation, agentSpeakingAudio, onOpenChange]);
-
   const formattedVoiceName = selectedVoice.charAt(0).toUpperCase() + selectedVoice.slice(1);
 
   return (
