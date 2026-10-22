@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Mail, Info, X, Globe } from "lucide-react";
+import Link from "next/link";
+import { Mail, Info, X, Globe, Network } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
 export default function Navbar() {
@@ -33,6 +34,15 @@ export default function Navbar() {
               <Globe className="w-4 h-4 text-white/80" />
               <span>{language === "en" ? "العربية" : "English"}</span>
             </button>
+
+            <Link
+              href="/graph"
+              className="flex items-center gap-1.5 text-white/85 hover:text-white transition-colors cursor-pointer bg-transparent border-0 p-0 text-sm font-normal"
+              title={language === "en" ? "Agent LangGraph Visualizer" : "مخطط مسار الوكيل"}
+            >
+              <Network className="w-4 h-4 text-white/80" />
+              <span>{language === "en" ? "Graph" : "المخطط"}</span>
+            </Link>
 
             <button
               onClick={() => setAboutOpen(true)}

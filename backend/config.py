@@ -26,6 +26,9 @@ LLM_API_KEY = get_env("LLM_API_KEY", "none")
 HF_TOKEN = get_env("HF_TOKEN")
 VOICETUT_SPACE = "mohammedaly22/VoiceTut-TTS"
 
+# NewsData.io Configuration
+NEWS_API_KEY = get_env("NEWSAPIKEY") or get_env("NEWSDATA_API_KEY")
+
 # Voice Profiles
 VOICE_PROFILES = {
     "ahmed": {

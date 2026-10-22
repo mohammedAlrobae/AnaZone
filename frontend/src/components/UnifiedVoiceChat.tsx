@@ -13,6 +13,8 @@ import {
   Power,
   Sparkles,
   Trash2,
+  CloudSun,
+  Newspaper,
 } from "lucide-react";
 import { WavRecorder } from "@/lib/wavRecorder";
 import {
@@ -325,6 +327,17 @@ export default function UnifiedVoiceChat({
     }
   }, [agentSpeakingAudio, playAudio]);
 
+  // Clean up audio and microphone on unmount / popup close
+  useEffect(() => {
+    return () => {
+      safelyPauseAudio();
+      if (recorderRef.current) {
+        void recorderRef.current.stop();
+        recorderRef.current = null;
+      }
+    };
+  }, [safelyPauseAudio]);
+
   const startListening = useCallback(async () => {
     if (recorderRef.current) return true;
     const transcriptionSession = ++transcriptionSessionRef.current;
@@ -551,8 +564,8 @@ export default function UnifiedVoiceChat({
   };
 
   // Send Text Message (Works in all states)
-  const handleSendText = async () => {
-    const text = inputText.trim();
+  const handleSendText = async (predefinedText?: string) => {
+    const text = (predefinedText || inputText).trim();
     if (!text || isTextLoading) return;
 
     // Auto-connect if disconnected
@@ -560,7 +573,9 @@ export default function UnifiedVoiceChat({
       setIsConnected(true);
     }
 
-    setInputText("");
+    if (!predefinedText) {
+      setInputText("");
+    }
     setIsTextLoading(true);
     setAgentState("thinking");
 
@@ -623,16 +638,16 @@ export default function UnifiedVoiceChat({
           {/* Status Text */}
           <span className="text-white/85 select-none text-[11px] sm:text-xs">
             {state === "disconnected"
-              ? (language === "ar" ? "╪║┘è╪▒ ┘à╪¬╪╡┘ä" : "Disconnected")
+              ? (language === "ar" ? "غير متصل" : "Disconnected")
               : state === "connecting"
-              ? (language === "ar" ? "╪¼╪º╪▒┘ì ╪º┘ä╪º╪¬╪╡╪º┘ä..." : "Connecting...")
+              ? (language === "ar" ? "جارٍ الاتصال..." : "Connecting...")
               : state === "ready"
-              ? (language === "ar" ? "╪¼╪º┘ç╪▓ ┘ä┘ä┘à╪¡╪º╪»╪½╪⌐" : "Agent Ready")
+              ? (language === "ar" ? "جاهز للمحادثة" : "Agent Ready")
               : state === "listening"
-              ? (language === "ar" ? "╪¼╪º╪▒┘ì ╪º┘ä╪º╪│╪¬┘à╪º╪╣..." : "Listening...")
+              ? (language === "ar" ? "جارٍ الاستماع..." : "Listening...")
               : state === "thinking"
-              ? (language === "ar" ? "╪¼╪º╪▒┘ì ╪º┘ä╪¬┘ü┘â┘è╪▒..." : "Thinking...")
-              : (language === "ar" ? "┘è╪¬╪¡╪»╪½ ╪º┘ä╪ó┘å..." : "Speaking...")}
+              ? (language === "ar" ? "جارٍ التفكير..." : "Thinking...")
+              : (language === "ar" ? "يتحدث الآن..." : "Speaking...")}
           </span>
 
           <span className="w-px h-3.5 bg-white/20 mx-0.5" />
@@ -791,6 +806,31 @@ export default function UnifiedVoiceChat({
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Quick Location Action Pills (Weather & News via LangGraph) */}
+      {activeLocation && (
+        <div className="flex items-center gap-2 mt-2 px-1 text-xs shrink-0">
+          <button
+            type="button"
+            onClick={() => void handleSendText(language === "ar" ? "ما هي حالة الطقس الحالية هنا؟" : "What is the current weather here?")}
+            disabled={isTextLoading}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/60 hover:bg-cyan-900/80 border border-cyan-500/40 text-cyan-200 text-[11px] transition-all hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-md"
+          >
+            <CloudSun className="w-3.5 h-3.5 text-cyan-400" />
+            <span>{language === "ar" ? "حالة الطقس" : "Live Weather"}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleSendText(language === "ar" ? "ما هي آخر الأخبار والمستجدات هنا؟" : "What are the latest news updates here?")}
+            disabled={isTextLoading}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/40 text-amber-200 text-[11px] transition-all hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-md"
+          >
+            <Newspaper className="w-3.5 h-3.5 text-amber-400" />
+            <span>{language === "ar" ? "آخر الأخبار" : "Latest News"}</span>
+          </button>
+        </div>
+      )}
+
       {/* 3. Bottom Controls & Text Input Bar */}
       <form
         onSubmit={(e) => {
@@ -808,8 +848,8 @@ export default function UnifiedVoiceChat({
           aria-label={isMicActive ? "Mute Microphone" : "Unmute Microphone"}
           title={
             isMicActive
-              ? (language === "ar" ? "╪º┘ä┘à┘è┘â╪▒┘ê┘ü┘ê┘å ┘é┘è╪» ╪º┘ä╪º╪│╪¬┘à╪º╪╣ (╪º┘å┘é╪▒ ┘ä┘ä┘â╪¬┘à)" : "Microphone Active (Click to mute)")
-              : (language === "ar" ? "╪º┘ä┘à┘è┘â╪▒┘ê┘ü┘ê┘å ┘à┘â╪¬┘ê┘à (╪º┘å┘é╪▒ ┘ä┘ä╪¬╪¡╪»╪½)" : "Microphone Muted (Click to talk)")
+              ? (language === "ar" ? "الميكروفون قيد الاستماع (انقر للكتم)" : "Microphone Active (Click to mute)")
+              : (language === "ar" ? "الميكروفون مكتوم (انقر للتحدث)" : "Microphone Muted (Click to talk)")
           }
           className={`p-2.5 rounded-lg transition-all duration-200 cursor-pointer shrink-0 flex items-center justify-center outline-none focus:outline-none focus:ring-0 ${
             !isConnected
@@ -833,8 +873,8 @@ export default function UnifiedVoiceChat({
           aria-label={isAgentVoiceMuted ? "Unmute Agent Voice" : "Mute Agent Voice"}
           title={
             isAgentVoiceMuted
-              ? (language === "ar" ? "╪╡┘ê╪¬ ╪º┘ä┘ê┘â┘è┘ä ┘à┘â╪¬┘ê┘à (┘ê╪╢╪╣ ╪º┘ä┘å╪╡ ╪º┘ä╪╡╪º┘à╪¬)" : "Agent Voice: MUTED (Silent text mode)")
-              : (language === "ar" ? "╪╡┘ê╪¬ ╪º┘ä┘ê┘â┘è┘ä ┘à┘ü╪╣┘æ┘ä (╪º┘å┘é╪▒ ┘ä┘ä┘â╪¬┘à)" : "Agent Voice: ON (Click to mute)")
+              ? (language === "ar" ? "صوت الوكيل مكتوم (وضع النص الصامت)" : "Agent Voice: MUTED (Silent text mode)")
+              : (language === "ar" ? "صوت الوكيل مفعّل (انقر للكتم)" : "Agent Voice: ON (Click to mute)")
           }
           className={`p-2.5 rounded-lg transition-all duration-200 cursor-pointer shrink-0 flex items-center justify-center outline-none focus:outline-none focus:ring-0 ${
             isAgentVoiceMuted

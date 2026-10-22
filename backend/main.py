@@ -2,7 +2,7 @@ import os
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.routers import voice, chat
+from backend.routers import voice, chat, graph_viz
 
 # Set up logging format
 logging.basicConfig(
@@ -29,6 +29,7 @@ app.add_middleware(
 # Register routers
 app.include_router(voice.router)
 app.include_router(chat.router)
+app.include_router(graph_viz.router)
 
 @app.get("/")
 def root():

@@ -14,6 +14,8 @@ interface PopupVoiceChatProps {
   onClearChat?: () => void;
   activeLocation: LocationSelected | null;
   agentSpeakingAudio: string | null;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export default function PopupVoiceChat({
@@ -23,8 +25,9 @@ export default function PopupVoiceChat({
   onClearChat,
   activeLocation,
   agentSpeakingAudio,
+  isOpen,
+  onOpenChange,
 }: PopupVoiceChatProps) {
-  const [isOpen, setIsOpen] = useState<boolean>(false);
   const { language } = useI18n();
 
   // Auto-open chat popup when user clicks a location to explore or agent speaks
@@ -43,7 +46,7 @@ export default function PopupVoiceChat({
         <div className="fixed bottom-6 right-6 z-50 animate-bounce-subtle">
           <button
             type="button"
-            onClick={() => setIsOpen(true)}
+            onClick={() => onOpenChange(true)}
             className="group relative flex items-center gap-3 bg-black/90 hover:bg-zinc-900 text-white pl-4 pr-5 py-3 rounded-full shadow-2xl border border-white/25 hover:border-white/50 transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-xl"
             aria-label="Open AI Voice Chat"
           >
@@ -101,7 +104,7 @@ export default function PopupVoiceChat({
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={() => onOpenChange(false)}
                 title={language === "ar" ? "تصغير المحادثة" : "Minimize Chat"}
                 className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
               >
@@ -109,7 +112,7 @@ export default function PopupVoiceChat({
               </button>
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={() => onOpenChange(false)}
                 title={language === "ar" ? "إغلاق" : "Close"}
                 className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
               >

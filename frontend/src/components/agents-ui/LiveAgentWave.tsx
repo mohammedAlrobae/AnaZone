@@ -29,7 +29,7 @@ export const AGENT_WAVE_CONFIGS: Record<
   speaking: {
     color: '#0026ff',
     colorShift: 0.0,
-    lineWidth: 1.6,
+    lineWidth: 1.8,
   },
   connecting: {
     color: '#1eff00',

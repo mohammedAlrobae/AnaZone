@@ -86,20 +86,12 @@ class RemoteVoiceTutTTSService:
             err_str = str(e)
             if any(term in err_str.lower() for term in ["zerogpu", "gpu", "quota", "exceeded", "limit", "rate", "429"]):
                 logger.warning(
-                    f"VoiceTut-TTS HuggingFace API temporarily unavailable or ZeroGPU quota reached ({err_str[:90]}...). Providing authentic VoiceTut-TTS voice persona sample for '{voice_key}'..."
+                    f"VoiceTut-TTS HuggingFace ZeroGPU quota temporarily reached ({err_str[:90]}...). Waiting for HuggingFace quota replenishment."
                 )
             else:
                 logger.warning(
-                    f"VoiceTut-TTS dynamic synthesis notice ({err_str[:90]}...). Providing authentic VoiceTut-TTS voice persona sample for '{voice_key}'..."
+                    f"VoiceTut-TTS dynamic synthesis notice: {err_str[:90]}..."
                 )
-
-            sample_audio = self.get_sample_audio(voice_key, "ar" if synthesis_language == "Arabic" else "en")
-            if sample_audio:
-                logger.info(
-                    f"Delivering authentic VoiceTut-TTS sample for persona '{voice_key}' ({'ar' if synthesis_language == 'Arabic' else 'en'}): {len(sample_audio):,} bytes."
-                )
-                return sample_audio, "audio/wav"
-
             raise
 
     def get_sample_audio(self, voice_name: str, language: str = "ar") -> Optional[bytes]:

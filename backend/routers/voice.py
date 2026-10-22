@@ -8,6 +8,8 @@ from backend.config import VOICE_PROFILES, DEFAULT_VOICE
 from backend.services.stt_service import stt_service
 from backend.services.llm_service import llm_service
 from backend.services.tts_service import tts_service
+from backend.services.agent_graph import agent_graph
+from backend.routers.chat import parse_location_context
 
 logger = logging.getLogger("router_voice")
 router = APIRouter(prefix="/api/voice", tags=["Voice Agent"])
@@ -125,19 +127,21 @@ def run_voice_pipeline(req: PipelineRequest):
                 "language": detected_lang
             }
 
-        # Step 2: LLM chat
-        conversation = list(req.history or [])
-        if req.location_context:
-            conversation.append({
-                "role": "system",
-                "content": (
-                    f"The user is exploring this location: {req.location_context}. "
-                    "Use it as context, and answer in the same language as the user's latest message."
-                )
-            })
-        conversation.append({"role": "user", "content": user_text})
+        # Step 2: Process query through LangGraph Agent (weather / news / general)
+        ctx_loc, ctx_country, ctx_lat, ctx_lng = parse_location_context(req.location_context)
+        state_input = {
+            "user_message": user_text,
+            "history": [{"role": m.get("role", "user"), "content": m.get("content", "")} for m in req.history or []],
+            "location_name": ctx_loc,
+            "country": ctx_country,
+            "lat": ctx_lat,
+            "lng": ctx_lng,
+            "voice": req.voice,
+            "language": detected_lang or "ar",
+        }
 
-        bot_text = llm_service.chat_completion(conversation)
+        graph_result = agent_graph.invoke(state_input)
+        bot_text = graph_result.get("reply_text") or "عذراً، لم أتمكن من إيجاد الرد المناسب حالياً."
 
         # Step 3: TTS (if not muted)
         audio_reply_b64 = None
