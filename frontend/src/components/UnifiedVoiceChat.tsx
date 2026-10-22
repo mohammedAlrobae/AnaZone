@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   Volume2,
   VolumeX,
@@ -12,6 +12,7 @@ import {
   MicOff,
   Power,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { WavRecorder } from "@/lib/wavRecorder";
 import {
@@ -34,6 +35,7 @@ interface UnifiedVoiceChatProps {
     botText: string,
     audioBase64?: string | null
   ) => void;
+  onClearChat?: () => void;
   activeLocation: LocationSelected | null;
   agentSpeakingAudio?: string | null;
   onAgentSpeakingChange?: (speaking: boolean) => void;
@@ -63,6 +65,7 @@ export default function UnifiedVoiceChat({
   selectedVoice,
   messages,
   onSendMessage,
+  onClearChat,
   activeLocation,
   agentSpeakingAudio,
   onAgentSpeakingChange,
@@ -99,6 +102,7 @@ export default function UnifiedVoiceChat({
   const pendingPartialAudioRef = useRef<{ audioBase64: string; session: number } | null>(null);
   const liveTranscriptRef = useRef("");
   const greetingPendingRef = useRef(false);
+  const hasGreetedRef = useRef(false);
   const processingRef = useRef(false);
   const stopListeningRef = useRef<() => void>(() => { });
   const resumeListeningRef = useRef<() => void>(() => { });
@@ -106,6 +110,32 @@ export default function UnifiedVoiceChat({
   const playPromiseRef = useRef<Promise<void> | null>(null);
 
   const { t, language } = useI18n();
+
+  // Deduplicate consecutive identical messages and empty messages
+  const dedupedMessages = useMemo(() => {
+    const list: ChatMessage[] = [];
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      if (!msg.content?.trim()) continue;
+      const prev = list[list.length - 1];
+      if (
+        prev &&
+        prev.role === msg.role &&
+        prev.content.trim() === msg.content.trim()
+      ) {
+        continue;
+      }
+      list.push(msg);
+    }
+    return list;
+  }, [messages]);
+
+  const handleClearChatClick = useCallback(() => {
+    hasGreetedRef.current = false;
+    if (onClearChat) {
+      onClearChat();
+    }
+  }, [onClearChat]);
 
   // Sync refs with state
   useEffect(() => {
@@ -455,14 +485,19 @@ export default function UnifiedVoiceChat({
     }
 
     try {
-      setAgentState("thinking");
-      greetingPendingRef.current = true;
-      const greeting = await sendGreeting({ voice: selectedVoice, language });
-      greetingPendingRef.current = false;
-      onSendMessage("", greeting.reply, greeting.audio_base64);
+      if (!hasGreetedRef.current && messages.length === 0) {
+        hasGreetedRef.current = true;
+        setAgentState("thinking");
+        greetingPendingRef.current = true;
+        const greeting = await sendGreeting({ voice: selectedVoice, language });
+        greetingPendingRef.current = false;
+        onSendMessage("", greeting.reply, greeting.audio_base64);
 
-      if (greeting.audio_base64 && !isAgentVoiceMutedRef.current) {
-        playAudio(greeting.audio_base64, messages.length);
+        if (greeting.audio_base64 && !isAgentVoiceMutedRef.current) {
+          playAudio(greeting.audio_base64, 0);
+        } else {
+          setAgentState("ready");
+        }
       } else {
         setAgentState("ready");
       }
@@ -636,11 +671,27 @@ export default function UnifiedVoiceChat({
             <button
               onClick={() => void disconnectAgent()}
               className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400/90 hover:text-red-300 transition-colors cursor-pointer outline-none"
-              title={language === "ar" ? "┘é╪╖╪╣ ╪º┘ä╪º╪¬╪╡╪º┘ä" : "Disconnect"}
+              title={language === "ar" ? "قطع الاتصال" : "Disconnect"}
             >
               <Power className="w-3 h-3 text-red-400/90" />
-              <span>{language === "ar" ? "┘é╪╖╪╣ ╪º┘ä╪º╪¬╪╡╪º┘ä" : "Disconnect"}</span>
+              <span>{language === "ar" ? "قطع الاتصال" : "Disconnect"}</span>
             </button>
+          )}
+
+          {/* Clear Chat Button */}
+          {dedupedMessages.length > 0 && onClearChat && (
+            <>
+              <span className="w-px h-3.5 bg-white/20 mx-0.5" />
+              <button
+                type="button"
+                onClick={handleClearChatClick}
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-white/60 hover:text-white transition-colors cursor-pointer outline-none"
+                title={language === "ar" ? "مسح المحادثة" : "Clear Chat"}
+              >
+                <Trash2 className="w-3 h-3 text-white/60 hover:text-white" />
+                <span className="hidden sm:inline">{language === "ar" ? "مسح" : "Clear"}</span>
+              </button>
+            </>
           )}
         </div>
 
@@ -664,64 +715,78 @@ export default function UnifiedVoiceChat({
         </div>
       )}
 
-      {/* 2. Messages Stream Area */}
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain mt-3 pr-1 space-y-3">
-        {messages.map((msg, index) => {
-          const isUser = msg.role === "user";
-          const isAudioPlaying = playingAudioIndex === index;
+      {/* 2. Messages Stream Area (Simple, Sleek, Deduplicated) */}
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain mt-3 pr-1 space-y-2.5">
+        {dedupedMessages.length === 0 && !liveTranscript && !isTextLoading ? (
+          <div className="h-full flex flex-col items-center justify-center text-center p-4 text-white/50 select-none">
+            <Sparkles className="w-5 h-5 mb-2 text-white/40" />
+            <p className="text-xs text-white/80 font-medium">
+              {language === "ar"
+                ? "انقر على أي موقع في الخريطة أو تحدث لاستكشاف العالم"
+                : "Click any place on the map or speak to explore"}
+            </p>
+            <p className="text-[11px] text-white/40 mt-1">
+              {language === "ar"
+                ? "سيرشدك الوكيل الصوتي فوراً"
+                : "Your AI voice guide will brief you instantly"}
+            </p>
+          </div>
+        ) : (
+          dedupedMessages.map((msg, index) => {
+            const isUser = msg.role === "user";
+            const isAudioPlaying = playingAudioIndex === index;
 
-          return (
-            <div
-              key={index}
-              className={`flex gap-2.5 ${isUser ? "justify-end" : "justify-start"}`}
-            >
-              {!isUser && (
-                <div className="w-7 h-7 rounded-full bg-zinc-900 border border-white/20 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
-                  <Volume2 className="w-3.5 h-3.5 text-white" />
-                </div>
-              )}
-
+            return (
               <div
-                className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed ${
-                  isUser
-                    ? "bg-zinc-900 border border-white/20 text-white font-normal rounded-xl rounded-tr-none shadow-sm"
-                    : "bg-black/60 border border-white/10 text-white font-normal rounded-xl rounded-tl-none"
-                }`}
-                dir="auto"
+                key={index}
+                className={`flex w-full ${isUser ? "justify-end" : "justify-start"}`}
               >
-                <p className="whitespace-pre-wrap">{msg.content}</p>
+                <div
+                  className={`group relative max-w-[85%] px-3.5 py-2.5 text-xs sm:text-sm leading-relaxed transition-all ${
+                    isUser
+                      ? "bg-zinc-800/90 border border-white/20 text-white rounded-2xl rounded-tr-none shadow-sm"
+                      : "bg-white/10 backdrop-blur-md border border-white/15 text-white/95 rounded-2xl rounded-tl-none shadow-sm"
+                  }`}
+                  dir="auto"
+                >
+                  <p className="whitespace-pre-wrap">{msg.content}</p>
 
-                {/* Audio Replay Button for Bot Messages */}
-                {!isUser && msg.audioBase64 && (
-                  <div className="mt-2.5 pt-1 flex items-center justify-between">
-                    <button
-                      onClick={() => playAudio(msg.audioBase64!, index)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-normal text-xs transition-colors cursor-pointer border border-white/20"
-                    >
-                      {isAudioPlaying ? (
-                        <>
-                          <Square className="w-3.5 h-3.5 fill-current text-white" />
-                          <span>{t.stopAudio}</span>
-                        </>
-                      ) : (
-                        <>
-                          <Volume2 className="w-3.5 h-3.5 text-white" />
-                          <span>{t.replayAudio}</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {isUser && (
-                <div className="w-7 h-7 rounded-full bg-zinc-800 border border-white/20 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
-                  <User className="w-3.5 h-3.5 text-white" />
+                  {/* Sleek inline audio replay for assistant messages */}
+                  {!isUser && msg.audioBase64 && (
+                    <div className="mt-2 pt-1.5 border-t border-white/10 flex items-center justify-between gap-2">
+                      <span className="text-[10px] text-white/40 font-mono">
+                        {isAudioPlaying
+                          ? (language === "ar" ? "جارٍ التشغيل..." : "Playing...")
+                          : (language === "ar" ? "صوت الوكيل" : "Voice")}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => playAudio(msg.audioBase64!, index)}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] transition-all cursor-pointer border ${
+                          isAudioPlaying
+                            ? "bg-blue-600/30 text-blue-200 border-blue-400/40"
+                            : "bg-white/10 hover:bg-white/20 text-white/80 hover:text-white border-white/15"
+                        }`}
+                      >
+                        {isAudioPlaying ? (
+                          <>
+                            <Square className="w-3 h-3 fill-current text-blue-300" />
+                            <span>{t.stopAudio}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="w-3 h-3 text-white/80" />
+                            <span>{t.replayAudio}</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          );
-        })}
+              </div>
+            );
+          })
+        )}
 
         {liveTranscript && (
           <div className="flex justify-end" aria-live="polite">

@@ -23,27 +23,27 @@ export const AGENT_WAVE_CONFIGS: Record<
   },
   ready: {
     color: '#10b981',
-    colorShift: 1.5,
+    colorShift: 0.0,
     lineWidth: 1.8,
   },
   speaking: {
     color: '#0026ff',
-    colorShift: 1.98,
+    colorShift: 0.0,
     lineWidth: 1.6,
   },
   connecting: {
     color: '#1eff00',
-    colorShift: 2.0,
+    colorShift: 0.0,
     lineWidth: 1.9,
   },
   listening: {
     color: '#ff5500',
-    colorShift: 1.06,
+    colorShift: 0.0,
     lineWidth: 3.8,
   },
   thinking: {
     color: '#ff00e1',
-    colorShift: 0.88,
+    colorShift: 0.0,
     lineWidth: 3.0,
   },
 };

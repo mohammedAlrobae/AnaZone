@@ -32,11 +32,33 @@ export default function Home() {
     audioBase64?: string | null
   ) => {
     setMessages((prev) => {
-      const next = userText.trim()
-        ? [...prev, { role: "user" as const, content: userText }]
-        : prev;
-      return [...next, { role: "assistant", content: botText, audioBase64 }];
+      const cleanUser = userText.trim();
+      const cleanBot = botText.trim();
+      let updated = [...prev];
+
+      // Add user message if not empty and not an immediate duplicate
+      if (cleanUser) {
+        const lastMsg = updated[updated.length - 1];
+        if (!lastMsg || lastMsg.role !== "user" || lastMsg.content !== cleanUser) {
+          updated.push({ role: "user", content: cleanUser });
+        }
+      }
+
+      // Add assistant response if not empty and not an immediate duplicate
+      if (cleanBot) {
+        const lastMsg = updated[updated.length - 1];
+        if (!lastMsg || lastMsg.role !== "assistant" || lastMsg.content !== cleanBot) {
+          updated.push({ role: "assistant", content: cleanBot, audioBase64 });
+        }
+      }
+
+      return updated;
     });
+  };
+
+  const handleClearChat = () => {
+    setMessages([]);
+    setAgentSpeakingAudio(null);
   };
 
   // Called when user clicks any place or coordinate on the dynamic World Map
@@ -60,14 +82,21 @@ export default function Home() {
       // Add educational exploration briefing to chat history
       const formattedContent = `${loc.name}\n\n${res.intro_text}`;
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: formattedContent,
-          audioBase64: res.audio_base64,
-        },
-      ]);
+      setMessages((prev) => {
+        const lastMsg = prev[prev.length - 1];
+        // Prevent duplicate briefing if clicked the same place consecutively
+        if (lastMsg && lastMsg.role === "assistant" && lastMsg.content === formattedContent) {
+          return prev;
+        }
+        return [
+          ...prev,
+          {
+            role: "assistant",
+            content: formattedContent,
+            audioBase64: res.audio_base64,
+          },
+        ];
+      });
 
       if (res.audio_base64) {
         setAgentSpeakingAudio(res.audio_base64);
@@ -150,6 +179,7 @@ export default function Home() {
           selectedVoice={selectedVoice}
           messages={messages}
           onSendMessage={handleNewMessage}
+          onClearChat={handleClearChat}
           activeLocation={selectedLocation}
           agentSpeakingAudio={agentSpeakingAudio}
         />

@@ -11,6 +11,7 @@ interface PopupVoiceChatProps {
   selectedVoice: string;
   messages: ChatMessage[];
   onSendMessage: (userText: string, botText: string, audioBase64?: string | null) => void;
+  onClearChat?: () => void;
   activeLocation: LocationSelected | null;
   agentSpeakingAudio: string | null;
 }
@@ -19,11 +20,19 @@ export default function PopupVoiceChat({
   selectedVoice,
   messages,
   onSendMessage,
+  onClearChat,
   activeLocation,
   agentSpeakingAudio,
 }: PopupVoiceChatProps) {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const { language } = useI18n();
+
+  // Auto-open chat popup when user clicks a location to explore or agent speaks
+  React.useEffect(() => {
+    if (activeLocation || agentSpeakingAudio) {
+      setIsOpen(true);
+    }
+  }, [activeLocation, agentSpeakingAudio]);
 
   const formattedVoiceName = selectedVoice.charAt(0).toUpperCase() + selectedVoice.slice(1);
 
@@ -115,6 +124,7 @@ export default function PopupVoiceChat({
               selectedVoice={selectedVoice}
               messages={messages}
               onSendMessage={onSendMessage}
+              onClearChat={onClearChat}
               activeLocation={activeLocation}
               agentSpeakingAudio={agentSpeakingAudio}
             />
