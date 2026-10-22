@@ -292,16 +292,7 @@ export default function UnifiedVoiceChat({
       setPlayingAudioIndex(null);
       currentAudioRef.current = null;
       playPromiseRef.current = null;
-      if (isConnectedRef.current) {
-        if (isMicActiveRef.current) {
-          setAgentState("listening");
-          resumeListeningRef.current();
-        } else {
-          setAgentState("ready");
-        }
-      } else {
-        setAgentState("disconnected");
-      }
+      setAgentState(isMicActiveRef.current ? "listening" : "ready");
     };
 
     audio.onerror = () => {
@@ -309,16 +300,7 @@ export default function UnifiedVoiceChat({
       setPlayingAudioIndex(null);
       currentAudioRef.current = null;
       playPromiseRef.current = null;
-      if (isConnectedRef.current) {
-        if (isMicActiveRef.current) {
-          setAgentState("listening");
-          resumeListeningRef.current();
-        } else {
-          setAgentState("ready");
-        }
-      } else {
-        setAgentState("disconnected");
-      }
+      setAgentState(isMicActiveRef.current ? "listening" : "ready");
     };
 
     const promise = audio.play();
@@ -330,17 +312,15 @@ export default function UnifiedVoiceChat({
         }
         playingAudioIndexRef.current = null;
         setPlayingAudioIndex(null);
-        if (isConnectedRef.current) {
-          setAgentState(isMicActiveRef.current ? "listening" : "ready");
-        } else {
-          setAgentState("disconnected");
-        }
+        setAgentState(isMicActiveRef.current ? "listening" : "ready");
       });
     }
   }, [safelyPauseAudio, setAgentState]);
 
   useEffect(() => {
     if (agentSpeakingAudio) {
+      setIsConnected(true);
+      isConnectedRef.current = true;
       playAudio(agentSpeakingAudio, -1);
     }
   }, [agentSpeakingAudio, playAudio]);
