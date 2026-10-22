@@ -650,25 +650,7 @@ export default function GraphPage() {
         </div>
       )}
 
-      {/* Bottom Legend */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-5 px-5 py-2.5 rounded-full bg-[#141424]/85 border border-white/10 backdrop-blur-xl shadow-xl text-xs text-white/70 pointer-events-none">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#a78bfa] shadow-[0_0_8px_#a78bfa]" />
-          <span>Control Node</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#38bdf8] shadow-[0_0_8px_#38bdf8]" />
-          <span>Tool / API Node</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#22d3ee] shadow-[0_0_8px_#22d3ee]" />
-          <span>Terminal Node</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-4 h-0.5 bg-white/40 border-dashed" />
-          <span>Conditional Edge</span>
-        </div>
-      </div>
+
     </div>
   );
 }

@@ -84,14 +84,46 @@ class RemoteVoiceTutTTSService:
 
         except Exception as e:
             err_str = str(e)
-            if any(term in err_str.lower() for term in ["zerogpu", "gpu", "quota", "exceeded", "limit", "rate", "429"]):
-                logger.warning(
-                    f"VoiceTut-TTS HuggingFace ZeroGPU quota temporarily reached ({err_str[:90]}...). Waiting for HuggingFace quota replenishment."
-                )
-            else:
-                logger.warning(
-                    f"VoiceTut-TTS dynamic synthesis notice: {err_str[:90]}..."
-                )
+            logger.warning(
+                f"VoiceTut-TTS notice ({err_str[:90]}...). Engaging Neural Edge-TTS fallback..."
+            )
+            try:
+                import asyncio
+                import edge_tts
+
+                is_ar = synthesis_language == "Arabic"
+                if voice_key == "yasmin":
+                    edge_voice = "ar-EG-SalmaNeural" if is_ar else "en-US-JennyNeural"
+                elif voice_key == "tareq":
+                    edge_voice = "ar-EG-ShakirNeural" if is_ar else "en-US-ChristopherNeural"
+                else:  # ahmed
+                    edge_voice = "ar-EG-ShakirNeural" if is_ar else "en-US-GuyNeural"
+
+                async def _synthesize_edge():
+                    comm = edge_tts.Communicate(clean_text, edge_voice)
+                    data = b""
+                    async for chunk in comm.stream():
+                        if chunk["type"] == "audio":
+                            data += chunk["data"]
+                    return data
+
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        import nest_asyncio
+                        nest_asyncio.apply()
+                        fallback_bytes = loop.run_until_complete(_synthesize_edge())
+                    else:
+                        fallback_bytes = asyncio.run(_synthesize_edge())
+                except Exception:
+                    fallback_bytes = asyncio.run(_synthesize_edge())
+
+                if fallback_bytes:
+                    logger.info(f"Fallback Neural TTS generated {len(fallback_bytes):,} bytes successfully.")
+                    return fallback_bytes, "audio/mp3"
+            except Exception as fb_err:
+                logger.error(f"Fallback TTS failed: {fb_err}")
+
             raise
 
     def get_sample_audio(self, voice_name: str, language: str = "ar") -> Optional[bytes]:

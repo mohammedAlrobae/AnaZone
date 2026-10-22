@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { Search, MapPin, Sparkles, X, Loader2, Volume2 } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { MapPin, Volume2, Loader2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { LocationSelected } from "./WorldMap";
 
@@ -11,99 +11,7 @@ interface Google3DRealMapProps {
   isExploring?: boolean;
 }
 
-interface QuickLandmark {
-  nameEn: string;
-  nameAr: string;
-  countryEn: string;
-  countryAr: string;
-  city: string;
-  lat: number;
-  lng: number;
-  emoji: string;
-}
-
-const QUICK_LANDMARKS: QuickLandmark[] = [
-  {
-    nameEn: "Pyramids of Giza",
-    nameAr: "أهرامات الجيزة",
-    countryEn: "Egypt",
-    countryAr: "مصر",
-    city: "Giza",
-    lat: 29.9792,
-    lng: 31.1342,
-    emoji: "🏜️",
-  },
-  {
-    nameEn: "Mecca Al-Haram",
-    nameAr: "المسجد الحرام، مكة",
-    countryEn: "Saudi Arabia",
-    countryAr: "السعودية",
-    city: "Mecca",
-    lat: 21.4225,
-    lng: 39.8262,
-    emoji: "🕋",
-  },
-  {
-    nameEn: "Burj Khalifa, Dubai",
-    nameAr: "برج خليفة، دبي",
-    countryEn: "UAE",
-    countryAr: "الإمارات",
-    city: "Dubai",
-    lat: 25.1972,
-    lng: 55.2744,
-    emoji: "🏙️",
-  },
-  {
-    nameEn: "Eiffel Tower, Paris",
-    nameAr: "برج إيفل، باريس",
-    countryEn: "France",
-    countryAr: "فرنسا",
-    city: "Paris",
-    lat: 48.8584,
-    lng: 2.2945,
-    emoji: "🗼",
-  },
-  {
-    nameEn: "Tokyo Tower",
-    nameAr: "برج طوكيو",
-    countryEn: "Japan",
-    countryAr: "اليابان",
-    city: "Tokyo",
-    lat: 35.6586,
-    lng: 139.7454,
-    emoji: "⛩️",
-  },
-  {
-    nameEn: "Colosseum, Rome",
-    nameAr: "كولوسيوم روما",
-    countryEn: "Italy",
-    countryAr: "إيطاليا",
-    city: "Rome",
-    lat: 41.8902,
-    lng: 12.4922,
-    emoji: "🏛️",
-  },
-  {
-    nameEn: "Statue of Liberty, New York",
-    nameAr: "تمثال الحرية، نيويورك",
-    countryEn: "USA",
-    countryAr: "أمريكا",
-    city: "New York",
-    lat: 40.6892,
-    lng: -74.0445,
-    emoji: "🗽",
-  },
-  {
-    nameEn: "Big Ben, London",
-    nameAr: "ساعة بيغ بن، لندن",
-    countryEn: "UK",
-    countryAr: "بريطانيا",
-    city: "London",
-    lat: 51.5007,
-    lng: -0.1246,
-    emoji: "🕰️",
-  },
-];
+const GOOGLE_MAPS_KEY = "AIzaSyA6myHzS10YXdcazAFalmXvDkrYCp5cLc8";
 
 export default function Google3DRealMap({
   onLocationSelect,
@@ -111,205 +19,292 @@ export default function Google3DRealMap({
   isExploring = false,
 }: Google3DRealMapProps) {
   const { language } = useI18n();
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [searchResults, setSearchResults] = useState<Array<{
-    display_name: string;
-    lat: string;
-    lon: string;
-    address?: { country?: string; city?: string; town?: string; state?: string };
-  }>>([]);
-  const [isSearching, setIsSearching] = useState<boolean>(false);
-  const [showResults, setShowResults] = useState<boolean>(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const map3dElementRef = useRef<any>(null);
+  const [native3DLoaded, setNative3DLoaded] = useState<boolean>(false);
+  const [isLocating, setIsLocating] = useState<boolean>(false);
+  const [pinScreenPos, setPinScreenPos] = useState<{ x: number; y: number } | null>(null);
 
-  const handleSelectQuickLandmark = (item: QuickLandmark) => {
-    if (!onLocationSelect) return;
-    const name = language === "ar" ? item.nameAr : item.nameEn;
-    const country = language === "ar" ? item.countryAr : item.countryEn;
-    onLocationSelect({
-      name,
-      country,
-      city: item.city,
-      lat: item.lat,
-      lng: item.lng,
-    });
-  };
-
-  const handleSearchChange = (text: string) => {
-    setSearchQuery(text);
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-
-    if (!text.trim() || text.trim().length < 2) {
-      setSearchResults([]);
-      setShowResults(false);
-      setIsSearching(false);
-      return;
-    }
-
-    setIsSearching(true);
-    searchTimeoutRef.current = setTimeout(async () => {
+  // Reverse geocoding helper
+  const reverseGeocode = useCallback(
+    async (lat: number, lng: number) => {
       try {
         const langParam = language === "ar" ? "ar,en" : "en";
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(
-            text.trim()
-          )}&limit=5&accept-language=${langParam}`
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat.toFixed(4)}&lon=${lng.toFixed(
+            4
+          )}&format=json&accept-language=${langParam}`,
+          { headers: { "User-Agent": "AnaZone/1.0" } }
         );
+
+        let locationName = `${lat.toFixed(2)}°, ${lng.toFixed(2)}°`;
+        let country = "";
+        let city = "";
+
         if (res.ok) {
           const data = await res.json();
-          setSearchResults(data);
-          setShowResults(true);
+          const address = data.address || {};
+          country = address.country || "";
+          city =
+            address.city ||
+            address.town ||
+            address.village ||
+            address.state ||
+            address.region ||
+            "";
+
+          if (city && country) {
+            locationName = `${city}, ${country}`;
+          } else if (country) {
+            locationName = country;
+          } else if (data.display_name) {
+            locationName = data.display_name.split(",").slice(0, 2).join(",").trim();
+          }
         }
+
+        return { locationName, country, city };
       } catch (err) {
-        console.warn("Search geocode error:", err);
-      } finally {
-        setIsSearching(false);
+        console.warn("Reverse geocode notice:", err);
+        return {
+          locationName: `${lat.toFixed(2)}°, ${lng.toFixed(2)}°`,
+          country: "",
+          city: "",
+        };
       }
-    }, 450);
-  };
+    },
+    [language]
+  );
 
-  const handleSelectSearchResult = (item: any) => {
-    if (!onLocationSelect) return;
-    const addr = item.address || {};
-    const city = addr.city || addr.town || addr.village || addr.state || "";
-    const country = addr.country || "";
-    const cleanName = item.display_name.split(",").slice(0, 2).join(",").trim();
+  // Handle location click from native <gmp-map-3d>
+  const handleMapClick = useCallback(
+    async (lat: number, lng: number, clientX?: number, clientY?: number) => {
+      if (isLocating) return;
+      setIsLocating(true);
 
-    onLocationSelect({
-      name: cleanName || item.display_name,
-      country,
-      city,
-      lat: parseFloat(item.lat),
-      lng: parseFloat(item.lon),
-    });
+      if (clientX !== undefined && clientY !== undefined && mapContainerRef.current) {
+        const rect = mapContainerRef.current.getBoundingClientRect();
+        setPinScreenPos({ x: clientX - rect.left, y: clientY - rect.top });
+      }
 
-    setSearchQuery("");
-    setShowResults(false);
-    setSearchResults([]);
+      try {
+        const info = await reverseGeocode(lat, lng);
+        if (onLocationSelect) {
+          onLocationSelect({
+            name: info.locationName,
+            country: info.country,
+            city: info.city,
+            lat: parseFloat(lat.toFixed(4)),
+            lng: parseFloat(lng.toFixed(4)),
+          });
+        }
+      } finally {
+        setIsLocating(false);
+      }
+    },
+    [isLocating, onLocationSelect, reverseGeocode]
+  );
+
+  // Initialize native Google Maps 3D with gmp-click support
+  useEffect(() => {
+    let isMounted = true;
+    const scriptId = "google-maps-3d-native-script";
+
+    const loadMaps3D = async () => {
+      try {
+        if (!(window as any).google?.maps?.importLibrary) {
+          await new Promise<void>((resolve, reject) => {
+            const existing = document.getElementById(scriptId);
+            if (existing) {
+              existing.addEventListener("load", () => resolve());
+              existing.addEventListener("error", () => reject());
+              return;
+            }
+            const script = document.createElement("script");
+            script.id = scriptId;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_KEY}&v=alpha&libraries=maps3d`;
+            script.async = true;
+            script.onload = () => resolve();
+            script.onerror = () => reject();
+            document.head.appendChild(script);
+          });
+        }
+
+        if (!isMounted || !mapContainerRef.current) return;
+
+        const { Map3DElement, Marker3DElement } = await (window as any).google.maps.importLibrary("maps3d");
+
+        const map3d = new Map3DElement({
+          center: { lat: 26.0, lng: 40.0, altitude: 15000000 },
+          tilt: 0,
+          range: 0,
+          heading: 0,
+          roll: 0,
+          mode: "HYBRID",
+        });
+
+        map3d.style.width = "100%";
+        map3d.style.height = "100%";
+
+        // Native 3D Click listener on Earth
+        map3d.addEventListener("gmp-click", (event: any) => {
+          if (event && event.position) {
+            const { lat, lng } = event.position;
+            const clientX = (event.domEvent as MouseEvent)?.clientX;
+            const clientY = (event.domEvent as MouseEvent)?.clientY;
+
+            // Place 3D marker
+            try {
+              const marker = new Marker3DElement({
+                position: { lat, lng, altitude: 200 },
+                altitudeMode: "RELATIVE_TO_GROUND",
+              });
+              map3d.append(marker);
+            } catch (_) { }
+
+            void handleMapClick(lat, lng, clientX, clientY);
+          }
+        });
+
+        if (mapContainerRef.current) {
+          mapContainerRef.current.innerHTML = "";
+          mapContainerRef.current.appendChild(map3d);
+          map3dElementRef.current = map3d;
+          setNative3DLoaded(true);
+        }
+      } catch (e) {
+        console.warn("Native Google 3D load notice, using standard 3D viewport:", e);
+      }
+    };
+
+    void loadMaps3D();
+
+    return () => {
+      isMounted = false;
+      if (mapContainerRef.current) {
+        mapContainerRef.current.innerHTML = "";
+      }
+    };
+  }, [handleMapClick]);
+
+  // Handle center pin selection (for iframe or manual selection)
+  const handleSelectCurrentCenter = async () => {
+    if (isLocating) return;
+    setIsLocating(true);
+
+    try {
+      // Coordinates of highlighted exploration hub
+      const lat = selectedLocation ? selectedLocation.lat : 29.9792;
+      const lng = selectedLocation ? selectedLocation.lng : 31.1342;
+
+      const info = await reverseGeocode(lat, lng);
+      if (onLocationSelect) {
+        onLocationSelect({
+          name: info.locationName,
+          country: info.country,
+          city: info.city,
+          lat,
+          lng,
+        });
+      }
+    } finally {
+      setIsLocating(false);
+    }
   };
 
   return (
     <div className="w-full h-full relative overflow-hidden bg-black select-none">
-      {/* Real Google Maps 3D Live Engine: 100% interactive, mouse pointer is the explorer with zero obstructions */}
-      <div className="relative w-full h-full bg-black overflow-hidden select-none pointer-events-auto">
-        <iframe
-          src="https://maps-docs-team.web.app/samples/3d-places-autocomplete/dist/"
-          title="Google Maps Photorealistic 3D Globe with Place Names"
-          className="absolute -top-[145px] left-0 w-full h-[calc(100%+290px)] border-0 select-none pointer-events-auto"
-          allow="geolocation; accelerometer; gyroscope"
-          loading="eager"
-        />
+      {/* 1. Google Maps 3D Live Engine: 100% interactive, mouse moves and orbits smoothly */}
+      <div
+        ref={mapContainerRef}
+        className="w-full h-full relative overflow-hidden bg-black select-none pointer-events-auto"
+      >
+        {!native3DLoaded && (
+          <iframe
+            src="https://maps-docs-team.web.app/samples/3d-places-autocomplete/dist/"
+            title="Google Maps Photorealistic 3D Globe with Place Names"
+            className="absolute -top-[145px] left-0 w-full h-[calc(100%+290px)] border-0 select-none pointer-events-auto"
+            allow="geolocation; accelerometer; gyroscope"
+            loading="eager"
+          />
+        )}
       </div>
 
-      {/* Floating Aeronautical HUD Overlay: pointer-events-none container so dragging the globe everywhere works 100% */}
-      <div className="absolute inset-0 pointer-events-none z-20 p-4 sm:p-6 flex flex-col justify-between">
-        {/* Top Floating Place Selector Bar */}
-        <div className="w-full max-w-xl flex flex-col gap-2">
-          {/* Glass Search Input */}
-          <div className="relative pointer-events-auto w-full">
-            <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-black/75 backdrop-blur-md border border-white/20 text-white shadow-2xl focus-within:border-cyan-400 transition-all">
-              <Search className="w-4 h-4 text-cyan-400 shrink-0" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                onFocus={() => {
-                  if (searchResults.length > 0) setShowResults(true);
-                }}
-                placeholder={
-                  language === "ar"
-                    ? "ابحث عن أي مدينة أو معلم لتحدث الرفيق عنها..."
-                    : "Search any city or landmark to talk with agent..."
-                }
-                className="bg-transparent border-0 outline-none text-xs sm:text-sm text-white placeholder-white/50 w-full font-normal"
-              />
-              {isSearching && <Loader2 className="w-4 h-4 text-cyan-400 animate-spin shrink-0" />}
-              {searchQuery && !isSearching && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setShowResults(false);
-                  }}
-                  className="p-1 rounded-full text-white/60 hover:text-white cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
+      {/* 2. THE RED ICON (Pointer Pin & Selection Badge) */}
+      <div className="absolute inset-0 pointer-events-none z-20">
+        {/* Dynamic Red Pin at Click Position OR Screen Center */}
+        <div
+          className="absolute -translate-x-1/2 -translate-y-full flex flex-col items-center pointer-events-none transition-all duration-300"
+          style={{
+            left: pinScreenPos ? `${pinScreenPos.x}px` : "50%",
+            top: pinScreenPos ? `${pinScreenPos.y}px` : "50%",
+          }}
+        >
+          {/* Action Button: Click to Select Place & Talk to Agent */}
+          <button
+            type="button"
+            onClick={handleSelectCurrentCenter}
+            className="pointer-events-auto mb-2 px-4 py-1.5 rounded-full bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-[0_4px_25px_rgba(239,68,68,0.9)] border border-white/20 transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
+            title={language === "ar" ? "اضغط لاختيار هذا المكان والتحدث مع الرفيق" : "Click to select place and talk to agent"}
+          >
+            <MapPin className="w-3.5 h-3.5 text-white fill-white" />
+            <span>
+              {isLocating
+                ? language === "ar"
+                  ? "جارٍ تحديد المكان..."
+                  : "Locating..."
+                : language === "ar"
+                ? "تحديد هذا المكان والتحدث"
+                : "Select Place & Talk"}
+            </span>
+          </button>
+
+          {/* Glowing Red Icon Marker with Radar Pulse */}
+          <div className="relative flex flex-col items-center">
+            {/* Pulsing Beacon Waves */}
+            <span className="absolute -inset-2 rounded-full bg-red-500/40 animate-ping" />
+            <span className="absolute -inset-4 rounded-full bg-red-600/20 animate-pulse" />
+
+            {/* Red Pin Sphere */}
+            <div className="relative w-9 h-9 rounded-full bg-gradient-to-tr from-red-600 via-rose-500 to-red-500 border-2 border-white flex items-center justify-center shadow-[0_0_30px_rgba(239,68,68,1)]">
+              <MapPin className="w-5 h-5 text-white fill-white" />
             </div>
 
-            {/* Instant Search Suggestions Dropdown */}
-            {showResults && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1.5 bg-zinc-900/95 backdrop-blur-lg border border-white/20 rounded-xl overflow-hidden shadow-2xl z-30 max-h-60 overflow-y-auto">
-                {searchResults.map((res, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleSelectSearchResult(res)}
-                    className="w-full text-left rtl:text-right px-4 py-2.5 text-xs sm:text-sm text-white hover:bg-cyan-500/20 hover:text-cyan-300 transition-colors flex items-center gap-2 border-b border-white/5 last:border-0 cursor-pointer"
-                  >
-                    <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                    <span className="truncate">{res.display_name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Pin Pointer Stem */}
+            <div className="w-1.5 h-2.5 bg-white -mt-0.5 rounded-b-full shadow-md" />
+            <span className="w-3.5 h-3.5 rounded-full bg-red-500 -mt-0.5 shadow-[0_0_15px_#ef4444]" />
           </div>
 
-          {/* Quick Destination Pills Carousel */}
-          <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-            <span className="text-[11px] font-medium text-white/70 whitespace-nowrap px-1 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-amber-400" />
-              {language === "ar" ? "وجهات سريعة:" : "Explore:"}
-            </span>
-            {QUICK_LANDMARKS.map((item, idx) => {
-              const label = language === "ar" ? item.nameAr : item.nameEn;
-              const isCurrent =
-                selectedLocation &&
-                (selectedLocation.name.includes(item.city) ||
-                  selectedLocation.name.includes(item.nameEn) ||
-                  selectedLocation.name.includes(item.nameAr));
-
-              return (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => handleSelectQuickLandmark(item)}
-                  className={`pointer-events-auto px-2.5 py-1 rounded-full text-xs font-normal whitespace-nowrap transition-all flex items-center gap-1.5 shadow-md border cursor-pointer ${
-                    isCurrent
-                      ? "bg-gradient-to-r from-cyan-600 to-blue-600 border-cyan-400 text-white font-medium shadow-cyan-500/30 scale-105"
-                      : "bg-black/70 hover:bg-white/20 border-white/15 text-white/90 hover:text-white backdrop-blur-md"
-                  }`}
-                >
-                  <span>{item.emoji}</span>
-                  <span>{label}</span>
-                </button>
-              );
-            })}
-          </div>
+          {/* Active Place Label under the Red Pin */}
+          {selectedLocation && (
+            <div className="mt-2 px-3 py-1 rounded-full bg-black/90 backdrop-blur-md border border-red-500/60 text-white text-xs font-medium flex items-center gap-2 shadow-2xl animate-fade-in pointer-events-auto">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <span className="truncate max-w-[220px]">{selectedLocation.name}</span>
+              {isExploring && <Loader2 className="w-3 h-3 text-red-400 animate-spin" />}
+            </div>
+          )}
         </div>
 
-        {/* Bottom Floating Active Location Indicator */}
+        {/* Floating Active Status HUD on Bottom-Left */}
         {selectedLocation && (
-          <div className="pointer-events-auto self-start bg-black/80 backdrop-blur-md border border-cyan-500/40 rounded-xl px-4 py-2.5 text-white shadow-2xl flex items-center gap-3 animate-fade-in max-w-md">
-            <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 shrink-0 border border-cyan-400/30">
-              <MapPin className="w-4 h-4" />
+          <div className="absolute bottom-5 left-5 pointer-events-auto bg-black/85 backdrop-blur-md border border-red-500/40 rounded-xl px-4 py-2.5 text-white shadow-2xl flex items-center gap-3 animate-fade-in max-w-sm">
+            <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-red-500/20 text-red-400 shrink-0 border border-red-400/30">
+              <MapPin className="w-4 h-4 fill-red-400" />
               {isExploring && (
-                <span className="absolute inset-0 rounded-full border border-cyan-400 animate-ping opacity-75" />
+                <span className="absolute inset-0 rounded-full border border-red-400 animate-ping opacity-75" />
               )}
             </div>
 
             <div className="min-w-0">
-              <div className="text-[11px] text-cyan-300 font-medium flex items-center gap-1">
+              <div className="text-[11px] text-red-300 font-medium flex items-center gap-1">
                 <Volume2 className="w-3 h-3" />
                 <span>
                   {isExploring
                     ? language === "ar"
-                      ? "جارٍ استدعاء الشرح المباشر والطقس..."
-                      : "Briefing agent on place & weather..."
+                      ? "الرفيق يجهّز النبذة والطقس..."
+                      : "Agent is briefing you..."
                     : language === "ar"
-                    ? "الموقع النشط في المحادثة"
-                    : "Active in Voice Chat"}
+                    ? "المكان المحدد في المحادثة"
+                    : "Selected Location"}
                 </span>
               </div>
               <p className="text-xs sm:text-sm font-medium text-white truncate">
