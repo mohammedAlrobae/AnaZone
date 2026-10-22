@@ -105,8 +105,8 @@ const translations: Record<Language, Translations> = {
     brand: "AnaZone",
     about: "About",
     contact: "Contact",
-    aboutModalTitle: "About the Platform",
-    aboutModalBody: "A unified platform combining voice conversation and interactive global exploration.\n\nDesigned for fluid dialogue, the companion listens, understands, and speaks naturally in Egyptian Arabic and English, maintaining an authentic vocal identity across both languages. Explore any place on the world map to listen to an immediate spoken briefing about its culture, geography, and history.\n\nPowered by high-performance cloud processing for instantaneous speech recognition, contextual reasoning, and expressive neural speech synthesis.",
+    aboutModalTitle: "About AnaZone",
+    aboutModalBody: "AnaZone is a next-generation planetary intelligence platform that bridges real-time voice conversation with photorealistic 3D Earth exploration.\n\nBuilt around natural human dialogue, our intelligent companion listens with sub-second Whisper recognition, reasons with high-capacity neural models, and speaks with authentic, emotionally nuanced voices in both Egyptian Arabic and English.\n\nTravel across continents or select any city, historical landmark, or natural wonder on the 3D globe to receive an immediate, immersive spoken briefing—enriched with live atmospheric weather data, real-time regional news, and rich cultural context.\n\nPowered entirely by distributed cloud neural pipelines, AnaZone delivers instant speech recognition, low-latency WebRTC streaming, and grounded planetary awareness in a unified, fluid experience.",
     close: "Close",
 
     heroTitle: "Voice Companion & World Explorer",
@@ -202,8 +202,8 @@ const translations: Record<Language, Translations> = {
     brand: "AnaZone",
     about: "عن المنصة",
     contact: "تواصل معنا",
-    aboutModalTitle: "عن المنصة",
-    aboutModalBody: "منصة تجمع بين المحادثة الصوتية الطبيعية واستكشاف العالم عبر واجهة موحدة ومتكاملة.\n\nتتيح المنصة حواراً سلساً وتلقائياً بالعامية المصرية الطبيعية وباللغة الإنجليزية، مع الحفاظ على نفس هوية الصوت في كلتا اللغتين. كما يمكنك النقر على أي مكان على خريطة العالم للاستماع فوراً إلى شرح صوتي شيّق يغطي معالم المكان، تاريخه، وثقافته.\n\nتعتمد المنصة بالكامل على معالجة سحابية فائقة السرعة لتحويل الصوت إلى نص، والاستدلال اللغوي المتقدم، والتوليد الصوتي عالي الجودة.",
+    aboutModalTitle: "عن أنا زون (AnaZone)",
+    aboutModalBody: "أنا زون (AnaZone) هي منصة استكشافية ذكية من الجيل القادم، تجمع بسلاسة بين المحادثة الصوتية الحية واستكشاف كوكب الأرض ثلاثي الأبعاد بدقة فائقة.\n\nصُمم الرفيق الذكي ليحاكي الحوار البشري الطبيعي؛ حيث يستمع إليك في أجزاء من الثانية عبر نموذج Whisper فائق السرعة، ويفكر عبر نماذج ذكاء اصطناعي عملاقة، ويتحدث بنبرات صوتية طبيعية وجذابة بالعامية المصرية الأصيلة واللغة الإنجليزية مع الحفاظ التام على هوية الصوت.\n\nحلّق عبر القارات واختر أي مدينة أو معلم تاريخي على مجسم الأرض لتستمع فوراً إلى إحاطة صوتية تفاعلية غنية بالمعلومات الثقافية والتاريخية، مدعومة بتحديثات الطقس الحية وأحدث الأخبار الإقليمية اللحظية.\n\nتعتمد المنصة بالكامل على بنية سحابية متقدمة تدمج النماذج العصبية فائقة السرعة مع تقنيات البث الصوتي الفوري عبر WebRTC لتقديم تجربة استكشاف عالمية استثنائية.",
     close: "إغلاق",
 
     heroTitle: "رفيقك الصوتي واستكشاف العالم",
