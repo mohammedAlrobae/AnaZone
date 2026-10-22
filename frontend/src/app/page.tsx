@@ -76,14 +76,11 @@ export default function Home() {
   // Called when user clicks any place or coordinate on the dynamic World Map
   const handleLocationSelect = useCallback(
     async (loc: LocationSelected) => {
-      // 1. Always update selected location so the HUD shows coordinates & name
+      // 1. Always update selected location so the HUD and Chat show coordinates & place
       setSelectedLocation(loc);
 
-      // 2. UX Decoupling: Only trigger agent briefing and voice IF the chat box is open!
-      // If the chat box is closed, do NOT auto-open the chat and do NOT trigger voice briefing.
-      if (!isChatOpenRef.current) {
-        return;
-      }
+      // 2. Open chat window so user sees the selected region and action pills
+      setIsChatOpen(true);
 
       setIsExploring(true);
       setAgentSpeakingAudio(null);
