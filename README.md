@@ -126,7 +126,6 @@ AnaZone/
 │
 ├── .env.example                 # Environment variables template
 ├── Procfile                     # Process file for Render / Railway deployments
-├── vercel.json                  # Mono-repo root directory mapping for Vercel
 ├── LICENSE                      # MIT License
 └── README.md                    # Project documentation
 ```
@@ -224,7 +223,7 @@ Using **Render** as an example:
 ### Frontend Deployment (Vercel)
 
 1. Import your GitHub repository into [Vercel](https://vercel.com).
-2. Set **Root Directory** to `frontend` (pre-configured in [`vercel.json`](vercel.json)).
+2. Set **Root Directory** to `frontend` by clicking **Edit** next to Root Directory in project settings.
 3. Add the following Environment Variables in project settings:
    - `NEXT_PUBLIC_API_URL`: Your deployed backend URL (e.g. `https://anazone-backend.onrender.com`).
    - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`: Your Google Maps key.
