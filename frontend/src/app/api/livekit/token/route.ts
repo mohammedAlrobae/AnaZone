@@ -1,13 +1,11 @@
 import { AccessToken } from 'livekit-server-sdk';
 import { NextRequest, NextResponse } from 'next/server';
 
-
 export async function GET(req: NextRequest) {
-  try {
-    const url = new URL(req.url);
-    const room = url.searchParams.get('room') || 'anazone-room';
-    const username = url.searchParams.get('username') || `user_${Math.floor(Math.random() * 100000)}`;
+  const room = req.nextUrl.searchParams.get('room') || 'anazone-room';
+  const username = req.nextUrl.searchParams.get('username') || `user_${Math.floor(Math.random() * 100000)}`;
 
+  try {
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
     const wsUrl = process.env.LIVEKIT_URL;
@@ -40,10 +38,10 @@ export async function GET(req: NextRequest) {
       room,
       identity: username,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error generating LiveKit token:', error);
     return NextResponse.json(
-      { error: error?.message || 'Failed to generate LiveKit token' },
+      { error: error instanceof Error ? error.message : 'Failed to generate LiveKit token' },
       { status: 500 }
     );
   }

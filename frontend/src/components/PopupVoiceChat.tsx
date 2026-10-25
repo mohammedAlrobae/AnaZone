@@ -10,7 +10,12 @@ import { useI18n } from "@/lib/i18n";
 interface PopupVoiceChatProps {
   selectedVoice: string;
   messages: ChatMessage[];
-  onSendMessage: (userText: string, botText: string, audioBase64?: string | null) => void;
+  onSendMessage: (
+    userText: string,
+    botText: string,
+    audioBase64?: string | null,
+    replaceLastUser?: boolean
+  ) => void;
   onClearChat?: () => void;
   activeLocation: LocationSelected | null;
   agentSpeakingAudio: string | null;

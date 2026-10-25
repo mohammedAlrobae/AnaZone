@@ -15,7 +15,7 @@ def get_env(key: str, default: str = "") -> str:
 # Cloudflare Configuration
 CLOUDFLARE_API_TOKEN = get_env("CLOUDFLARE_API_TOKEN")
 CLOUDFLARE_ACCOUNT_ID = get_env("CLOUDFLARE_ACCOUNT_ID")
-CLOUDFLARE_WHISPER_MODEL = get_env("CLOUDFLARE_WHISPER_MODEL", "@cf/openai/whisper")
+CLOUDFLARE_WHISPER_MODEL = get_env("CLOUDFLARE_WHISPER_MODEL", "@cf/openai/whisper-large-v3-turbo")
 
 # Groq Cloud LLM Configuration
 GROQ_API_KEY = get_env("cloud_groq_api") or get_env("GROQ_API_KEY")

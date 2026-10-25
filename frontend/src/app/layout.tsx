@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AnaZone - Voice Companion & World Explorer",
-  description: "AnaZone - Real-time Voice Companion and World Explorer",
+  title: "AnaZone | Every Coordinate Has a Story",
+  description: "Touch anywhere on the 3D globe to hear live breaking news, local weather, and rich history in natural human speech",
 };
 
 import { LanguageProvider } from "@/lib/i18n";

@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
 
 export interface VoiceProfile {
   id: string;
@@ -31,6 +31,67 @@ export interface ChatApiResponse {
   audio_base64?: string | null;
   voice: string;
   is_muted?: boolean;
+}
+
+async function readSseResponse<T>(
+  response: Response,
+  onToken: (text: string) => void,
+  onTranscript?: (text: string) => void,
+  onReply?: (text: string) => void,
+  onAudioChunk?: (audioBase64: string) => void
+): Promise<T> {
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ detail: "Unknown error" }));
+    throw new Error(errorData.detail || `Server error (${response.status})`);
+  }
+  if (!response.body) {
+    throw new Error("Streaming response body is unavailable");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let completed: T | null = null;
+
+  const handleEvent = (block: string) => {
+    let eventName = "message";
+    const dataLines: string[] = [];
+    for (const line of block.replace(/\r/g, "").split("\n")) {
+      if (line.startsWith("event:")) eventName = line.slice(6).trim();
+      if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
+    }
+    if (!dataLines.length) return;
+
+    const data = JSON.parse(dataLines.join("\n")) as {
+      text?: string;
+      message?: string;
+      audio_base64?: string;
+    } & T;
+    if (eventName === "token" && data.text) onToken(data.text);
+    else if (eventName === "transcript") onTranscript?.(data.text || "");
+    else if (eventName === "reply" && data.text) onReply?.(data.text);
+    else if (eventName === "audio_chunk" && data.audio_base64) {
+      onAudioChunk?.(data.audio_base64);
+    } else if (eventName === "complete") completed = data;
+    else if (eventName === "error") {
+      throw new Error("REQUEST_FAILED");
+    }
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+    let separator = /\r?\n\r?\n/.exec(buffer);
+    while (separator) {
+      handleEvent(buffer.slice(0, separator.index));
+      buffer = buffer.slice(separator.index + separator[0].length);
+      separator = /\r?\n\r?\n/.exec(buffer);
+    }
+    if (done) break;
+  }
+  if (buffer.trim()) handleEvent(buffer);
+  if (completed === null) throw new Error("The stream ended before the response completed");
+  return completed;
 }
 
 export async function sendGreeting(params: {
@@ -102,24 +163,39 @@ export async function sendVoicePipeline(params: {
   return res.json();
 }
 
-export async function transcribeVoiceChunk(audioBase64: string): Promise<{
-  text: string;
-  language: string;
-}> {
-  const formData = new FormData();
-  formData.set("audio_base64", audioBase64);
-
-  const res = await fetch(`${API_BASE_URL}/api/voice/transcribe`, {
+export async function streamVoicePipeline(
+  params: {
+    audioBase64: string;
+    voice: string;
+    history: { role: string; content: string }[];
+    isMuted: boolean;
+    locationContext?: string;
+  },
+  onToken: (text: string) => void,
+  onTranscript: (text: string) => void,
+  onReply?: (text: string) => void,
+  onAudioChunk?: (audioBase64: string) => void,
+  signal?: AbortSignal
+): Promise<PipelineResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/voice/pipeline/stream`, {
     method: "POST",
-    body: formData,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      audio_base64: params.audioBase64,
+      voice: params.voice,
+      history: params.history,
+      is_muted: params.isMuted,
+      location_context: params.locationContext,
+    }),
+    signal,
   });
-
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({ detail: "Unknown error" }));
-    throw new Error(errorData.detail || `Server error (${res.status})`);
-  }
-
-  return res.json();
+  return readSseResponse<PipelineResponse>(
+    response,
+    onToken,
+    onTranscript,
+    onReply,
+    onAudioChunk
+  );
 }
 
 export async function sendChatMessage(params: {
@@ -147,6 +223,32 @@ export async function sendChatMessage(params: {
   }
 
   return res.json();
+}
+
+export async function streamChatMessage(
+  params: {
+    message: string;
+    voice: string;
+    history: { role: string; content: string }[];
+    isMuted: boolean;
+    locationContext?: string;
+  },
+  onToken: (text: string) => void,
+  onReply?: (text: string) => void,
+  onAudioChunk?: (audioBase64: string) => void
+): Promise<ChatApiResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message: params.message,
+      voice: params.voice,
+      history: params.history,
+      is_muted: params.isMuted,
+      location_context: params.locationContext,
+    }),
+  });
+  return readSseResponse<ChatApiResponse>(response, onToken, undefined, onReply, onAudioChunk);
 }
 
 export async function exploreLocation(params: {

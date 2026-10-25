@@ -9,6 +9,7 @@ from backend.config import DEFAULT_VOICE
 from backend.services.llm_service import llm_service
 from backend.services.tts_service import tts_service
 from backend.services.agent_graph import agent_graph
+from backend.streaming import StreamEmitter, StreamingSpeech, create_sse_response
 
 logger = logging.getLogger("router_chat")
 router = APIRouter(prefix="/api/chat", tags=["Text Chat"])
@@ -141,4 +142,57 @@ def chat_with_agent(req: ChatRequest):
         }
     except Exception as e:
         logger.error(f"Chat error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="تعذر إكمال طلبك الآن. حاول مرة أخرى بعد قليل.",
+        )
+
+
+@router.post("/stream")
+def stream_chat_with_agent(req: ChatRequest):
+    """Stream generated reply text as it arrives, then return its completed audio."""
+    def run(emit: StreamEmitter) -> None:
+        is_arabic = bool(re.search(r"[\u0600-\u06FF]", req.message))
+        ctx_loc, ctx_country, ctx_lat, ctx_lng = parse_location_context(req.location_context)
+        streamed_tokens: list[str] = []
+        speech = StreamingSpeech(req.voice or DEFAULT_VOICE, emit, not req.is_muted)
+
+        def emit_token(token: str) -> None:
+            streamed_tokens.append(token)
+            emit("token", {"text": token})
+            speech.add_text(token)
+
+        state_input = {
+            "user_message": req.message,
+            "history": [{"role": item.role, "content": item.content} for item in req.history or []],
+            "location_name": req.location_name or ctx_loc,
+            "country": req.country or ctx_country,
+            "lat": req.lat if req.lat is not None else ctx_lat,
+            "lng": req.lng if req.lng is not None else ctx_lng,
+            "voice": req.voice,
+            "language": "ar" if is_arabic else "en",
+            "on_token": emit_token,
+        }
+        graph_result = agent_graph.invoke(state_input)
+        reply = graph_result.get("reply_text") or "عذراً، لم أتمكن من إيجاد الرد المناسب حالياً."
+        if not streamed_tokens:
+            emit_token(reply)
+        emit("reply", {"text": reply})
+        audio_base64 = speech.finish()
+
+        emit(
+            "complete",
+            {
+                "reply": reply,
+                "audio_base64": audio_base64,
+                "voice": req.voice,
+                "is_muted": req.is_muted,
+                "intent": graph_result.get("intent"),
+                "weather_data": graph_result.get("weather_data"),
+                "news_data": graph_result.get("news_data"),
+                "is_place_specific": graph_result.get("is_place_specific"),
+                "news_place_target": graph_result.get("news_place_target"),
+            },
+        )
+
+    return create_sse_response(run)

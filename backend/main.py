@@ -1,6 +1,7 @@
 import os
 import logging
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from backend.routers import voice, chat, graph_viz
 
@@ -11,17 +12,22 @@ logging.basicConfig(
 )
 logger = logging.getLogger("main")
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LAUGHING_CAT_GIF = os.path.join(BASE_DIR, "laughing-cat.gif")
+
 app = FastAPI(
     title="Arabic Voice AI Agent Backend",
-    description="Clean, modular backend powering Arabic Voice Agent with Cloudflare Whisper v3 Turbo, Claude Sonnet 9, and VoiceTut-TTS",
-    version="1.0.0"
+    description="Voice agent using Cloudflare Whisper Turbo, streaming Groq inference, and Hugging Face TTS",
+    version="1.0.0",
+    docs_url=None,
+    redoc_url=None,
 )
 
 # Configure CORS for Next.js frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins for local dev and flexibility
-    allow_credentials=True,
+    allow_origins=["*"],  # Allows all origins for frontend deployments
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -50,6 +56,16 @@ def root():
 def health_check():
     return {"status": "healthy"}
 
+@app.get("/docs", include_in_schema=False)
+@app.get("/redoc", include_in_schema=False)
+def docs_laughing_cat():
+    if os.path.exists(LAUGHING_CAT_GIF):
+        return FileResponse(LAUGHING_CAT_GIF, media_type="image/gif")
+    return {"message": "Docs are private"}
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("backend.main:app", host=host, port=port, reload=False)
+

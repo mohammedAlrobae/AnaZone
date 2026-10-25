@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Send, Trash2, Bot, User, Loader2, Pause, Volume2 } from "lucide-react";
-import { ChatMessage, sendChatMessage } from "@/lib/api";
+import { ChatMessage, streamChatMessage } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
 interface ChatBoxProps {
@@ -22,6 +22,7 @@ export default function ChatBox({
 }: ChatBoxProps) {
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [streamingReply, setStreamingReply] = useState("");
   const [playingAudioIndex, setPlayingAudioIndex] = useState<number | null>(null);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -38,7 +39,7 @@ export default function ChatBox({
     if (messages.length > 0) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, isLoading]);
+  }, [messages, isLoading, streamingReply]);
 
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -47,6 +48,8 @@ export default function ChatBox({
 
     setInputText("");
     setIsLoading(true);
+    setStreamingReply("");
+    onSendMessage(text, "");
 
     try {
       const historyPayload = messages.map((m) => ({
@@ -54,25 +57,26 @@ export default function ChatBox({
         content: m.content,
       }));
 
-      const res = await sendChatMessage({
-        message: text,
-        voice: selectedVoice,
-        history: historyPayload,
-        isMuted,
-      });
+      const res = await streamChatMessage(
+        {
+          message: text,
+          voice: selectedVoice,
+          history: historyPayload,
+          isMuted,
+        },
+        (token) => setStreamingReply((previous) => previous + token)
+      );
 
-      onSendMessage(text, res.reply, res.audio_base64);
+      onSendMessage("", res.reply, res.audio_base64);
+      setStreamingReply("");
 
       if (res.audio_base64 && !isMuted) {
         playAudio(res.audio_base64, messages.length + 1);
       }
     } catch (err: unknown) {
       console.error("Chat error:", err);
-      onSendMessage(
-        text,
-        t.chatErrorNotice,
-        null
-      );
+      setStreamingReply("");
+      onSendMessage("", t.chatErrorNotice, null);
     } finally {
       setIsLoading(false);
     }
@@ -230,7 +234,19 @@ export default function ChatBox({
           })
         )}
 
-        {isLoading && (
+        {streamingReply && (
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-2xl bg-[#2e8b57] text-white flex items-center justify-center shrink-0">
+              <Bot className="w-4 h-4" />
+            </div>
+            <div className="max-w-[82%] rounded-2xl rounded-tl-none border border-gray-200 bg-white p-4 text-sm leading-relaxed text-gray-900 whitespace-pre-wrap" dir="auto">
+              {streamingReply}
+              <span className="ml-1 inline-block h-3 w-1.5 animate-pulse bg-[#2e8b57] align-middle" />
+            </div>
+          </div>
+        )}
+
+        {isLoading && !streamingReply && (
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-2xl bg-[#2e8b57] text-white flex items-center justify-center shrink-0">
               <Bot className="w-4 h-4" />

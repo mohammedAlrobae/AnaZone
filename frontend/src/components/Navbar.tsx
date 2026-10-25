@@ -13,11 +13,7 @@ export default function Navbar() {
     <>
       <header className="absolute top-0 left-0 right-0 z-50 bg-black border-b border-white/10 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          {/* Logo / Brand Name */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white font-normal text-sm">
-              A
-            </div>
+          <div className="flex items-center">
             <span className="text-white font-normal text-lg sm:text-xl tracking-tight">
               {t.brand}
             </span>
@@ -53,7 +49,7 @@ export default function Navbar() {
             </button>
 
             <a
-              href="mailto:moalrobae@gmail.com"
+              href="mailto:contact@anazone.ai"
               className="flex items-center gap-1.5 text-white/85 hover:text-white transition-colors cursor-pointer bg-transparent border-0 p-0 text-sm font-normal"
             >
               <Mail className="w-4 h-4 text-white/80" />

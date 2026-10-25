@@ -33,13 +33,18 @@ export default function HeroSection({ onScrollToAgent }: HeroSectionProps) {
       {/* Content strictly on the LEFT side so the panda on the right remains completely visible */}
       <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 w-full flex items-center pt-20 pb-12">
         <div className="max-w-xl text-left rtl:text-right">
-          {/* Title in white words */}
-          <h1 className="text-4xl sm:text-6xl font-normal text-white leading-tight mb-6 tracking-tight">
-            {t.heroTitle}
-          </h1>
+          {/* Hero Title: AnaZone prominent, tagline in smaller font, no dash */}
+          <div className="mb-6 flex flex-col gap-2.5">
+            <h1 className="text-5xl sm:text-7xl font-semibold text-white tracking-tight leading-none">
+              {t.brand}
+            </h1>
+            <p className="text-2xl sm:text-4xl font-normal text-white/90 leading-snug tracking-tight">
+              {t.heroTitle}
+            </p>
+          </div>
 
-          {/* Under this title words in white color */}
-          <p className="text-lg sm:text-2xl text-white font-normal leading-relaxed mb-10 max-w-lg">
+          {/* Description */}
+          <p className="text-base sm:text-xl text-white/80 font-normal leading-relaxed mb-10 max-w-lg">
             {t.heroSubtitle}
           </p>
 

@@ -16,7 +16,8 @@ SPEAKER_MAP = {
 }
 
 def clean_text_for_tts(text: str) -> str:
-    """Removes markdown symbols, brackets, and emojis for clean Arabic TTS synthesis."""
+    """Removes reasoning tags, markdown symbols, brackets, and emojis for clean Arabic TTS synthesis."""
+    text = re.sub(r"<think>[\s\S]*?</think>", "", text, flags=re.IGNORECASE)
     text = re.sub(r"[\*\_#`~>]", "", text)
     text = re.sub(r"\[.*?\]\(.*?\)", "", text)
     text = re.sub(r"[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]", "", text)
@@ -65,8 +66,8 @@ class RemoteVoiceTutTTSService:
                 speaker=speaker_id,
                 ref_audio=None,
                 ref_text="",
-                num_step=32,
-                guidance=3.0,
+                num_step=16,
+                guidance=2.5,
                 speed=1.0,
                 normalize=True,
                 api_name="/synthesize"
@@ -79,52 +80,21 @@ class RemoteVoiceTutTTSService:
             with open(audio_filepath, "rb") as f:
                 wav_bytes = f.read()
 
+            # Clean up temporary download file from gradio_client to prevent disk leaks
+            try:
+                if os.path.isfile(audio_filepath):
+                    os.remove(audio_filepath)
+            except Exception as rm_err:
+                logger.debug(f"Could not remove temp audio file: {rm_err}")
+
             logger.info(f"VoiceTut-TTS dynamic synthesis complete: {len(wav_bytes):,} bytes received for voice '{voice_key}'.")
             return wav_bytes, "audio/wav"
 
         except Exception as e:
-            err_str = str(e)
-            logger.warning(
-                f"VoiceTut-TTS notice ({err_str[:90]}...). Engaging Neural Edge-TTS fallback..."
-            )
-            try:
-                import asyncio
-                import edge_tts
-
-                is_ar = synthesis_language == "Arabic"
-                if voice_key == "yasmin":
-                    edge_voice = "ar-EG-SalmaNeural" if is_ar else "en-US-JennyNeural"
-                elif voice_key == "tareq":
-                    edge_voice = "ar-EG-ShakirNeural" if is_ar else "en-US-ChristopherNeural"
-                else:  # ahmed
-                    edge_voice = "ar-EG-ShakirNeural" if is_ar else "en-US-GuyNeural"
-
-                async def _synthesize_edge():
-                    comm = edge_tts.Communicate(clean_text, edge_voice)
-                    data = b""
-                    async for chunk in comm.stream():
-                        if chunk["type"] == "audio":
-                            data += chunk["data"]
-                    return data
-
-                try:
-                    loop = asyncio.get_event_loop()
-                    if loop.is_running():
-                        import nest_asyncio
-                        nest_asyncio.apply()
-                        fallback_bytes = loop.run_until_complete(_synthesize_edge())
-                    else:
-                        fallback_bytes = asyncio.run(_synthesize_edge())
-                except Exception:
-                    fallback_bytes = asyncio.run(_synthesize_edge())
-
-                if fallback_bytes:
-                    logger.info(f"Fallback Neural TTS generated {len(fallback_bytes):,} bytes successfully.")
-                    return fallback_bytes, "audio/mp3"
-            except Exception as fb_err:
-                logger.error(f"Fallback TTS failed: {fb_err}")
-
-            raise
+            # Invalidate cached client so subsequent calls reconnect cleanly
+            self._client = None
+            logger.error(f"Hugging Face VoiceTut-TTS synthesis failed: {e}")
+            raise RuntimeError(f"VoiceTut-TTS synthesis error: {e}")
 
     def get_sample_audio(self, voice_name: str, language: str = "ar") -> Optional[bytes]:
         """Returns a language-matched audition using the selected speaker identity."""

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, type ComponentProps } from 'react';
+import { useMemo, useState, type ComponentProps } from 'react';
 import { type VariantProps, cva } from 'class-variance-authority';
 import { type AgentState, type TrackReferenceOrPlaceholder } from '@livekit/components-react';
 
@@ -194,30 +194,43 @@ function WaveShader({
   ...props
 }: WaveShaderProps & ComponentProps<'div'>) {
   const rgbColor = useMemo(() => hexToRgb(color), [color]);
+  const [shaderFailed, setShaderFailed] = useState(false);
 
   return (
     <div ref={ref} className={className} {...props}>
-      <ReactShaderToy
-        fs={shaderSource}
-        devicePixelRatio={globalThis.devicePixelRatio ?? 1}
-        uniforms={{
-          uSpeed: { type: '1f', value: speed },
-          uAmplitude: { type: '1f', value: amplitude },
-          uFrequency: { type: '1f', value: frequency },
-          uMix: { type: '1f', value: mix },
-          uLineWidth: { type: '1f', value: lineWidth },
-          uSmoothing: { type: '1f', value: blur },
-          uColor: { type: '3fv', value: rgbColor },
-          uColorShift: { type: '1f', value: colorShift },
-        }}
-        onError={(error) => {
-          console.error('Shader error:', error);
-        }}
-        onWarning={(warning) => {
-          console.warn('Shader warning:', warning);
-        }}
-        style={{ width: '100%', height: '100%' }}
-      />
+      {shaderFailed ? (
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 1000 100"
+          preserveAspectRatio="none"
+          className="h-full w-full animate-pulse"
+        >
+          <path
+            d="M0 50 C80 50 80 50 160 50 S240 50 320 50 S400 50 480 50 S560 50 640 50 S720 50 800 50 S880 50 1000 50"
+            fill="none"
+            stroke={color}
+            strokeWidth={Math.max(lineWidth, 2)}
+            style={{ filter: `drop-shadow(0 0 7px ${color})`, opacity: mix }}
+          />
+        </svg>
+      ) : (
+        <ReactShaderToy
+          fs={shaderSource}
+          devicePixelRatio={globalThis.devicePixelRatio ?? 1}
+          uniforms={{
+            uSpeed: { type: '1f', value: speed },
+            uAmplitude: { type: '1f', value: amplitude },
+            uFrequency: { type: '1f', value: frequency },
+            uMix: { type: '1f', value: mix },
+            uLineWidth: { type: '1f', value: lineWidth },
+            uSmoothing: { type: '1f', value: blur },
+            uColor: { type: '3fv', value: rgbColor },
+            uColorShift: { type: '1f', value: colorShift },
+          }}
+          onError={() => setShaderFailed(true)}
+          style={{ width: '100%', height: '100%' }}
+        />
+      )}
     </div>
   );
 }

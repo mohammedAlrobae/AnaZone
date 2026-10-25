@@ -10,6 +10,10 @@ export interface RecorderResult {
   durationMs: number;
 }
 
+const SPEECH_START_RMS_THRESHOLD = 0.003;
+const SPEECH_CONTINUE_RMS_THRESHOLD = 0.0018;
+const SPEECH_START_MIN_DURATION_MS = 180;
+const SPEECH_END_SILENCE_MS = 650;
 export class WavRecorder {
   private audioContext: AudioContext | null = null;
   private mediaStream: MediaStream | null = null;
@@ -18,15 +22,13 @@ export class WavRecorder {
   private highPassFilter: BiquadFilterNode | null = null;
   private lowPassFilter: BiquadFilterNode | null = null;
   private audioBuffers: Float32Array[] = [];
-  private partialAudioBuffers: Float32Array[] = [];
-  private partialAudioSampleCount = 0;
-  private samplesSincePartial = 0;
-  private partialAudioCallback: ((audioBase64: string) => void) | null = null;
   private sampleRate = 16000; // Optimal 16kHz for Whisper v3 Turbo
   private isRecording = false;
   private volumeCallback: ((volume: number) => void) | null = null;
   private startTime = 0;
   private speechFramesCount = 0;
+  private speechStartNotified = false;
+  private speechCandidateDurationMs = 0;
   private totalFramesCount = 0;
   private silenceDurationMs = 0;
   private speechEndNotified = false;
@@ -34,19 +36,19 @@ export class WavRecorder {
   async start(
     onVolume?: (volume: number) => void,
     onSpeechEnd?: () => void,
-    onPartialAudio?: (audioBase64: string) => void
+    onSpeechStart?: () => void
   ): Promise<void> {
     this.volumeCallback = onVolume || null;
-    this.partialAudioCallback = onPartialAudio || null;
     this.audioBuffers = [];
-    this.partialAudioBuffers = [];
-    this.partialAudioSampleCount = 0;
-    this.samplesSincePartial = 0;
     this.speechFramesCount = 0;
+    this.speechStartNotified = false;
+    this.speechCandidateDurationMs = 0;
     this.totalFramesCount = 0;
     this.silenceDurationMs = 0;
     this.speechEndNotified = false;
     this.startTime = Date.now();
+
+    this.sampleRate = 16000;
 
     // 1. Hardware & Browser Level Constraints (Layer 1: AEC + HW Noise Suppression)
     this.mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -63,6 +65,13 @@ export class WavRecorder {
       window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     this.audioContext = new AudioCtx({ sampleRate: this.sampleRate });
+    if (this.audioContext.state === "suspended") {
+      await this.audioContext.resume();
+    }
+    // Adapt to true device sample rate (e.g., 44.1kHz or 48kHz on iOS Safari)
+    if (this.audioContext.sampleRate) {
+      this.sampleRate = this.audioContext.sampleRate;
+    }
 
     this.source = this.audioContext.createMediaStreamSource(this.mediaStream);
 
@@ -80,7 +89,7 @@ export class WavRecorder {
     this.lowPassFilter.Q.value = 0.707;
 
     // Processor Node
-    this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
+    this.processor = this.audioContext.createScriptProcessor(1024, 1, 1);
 
     this.processor.onaudioprocess = (e) => {
       if (!this.isRecording) return;
@@ -93,57 +102,37 @@ export class WavRecorder {
       }
       const rms = Math.sqrt(sum / input.length);
       this.totalFramesCount++;
+      const frameDurationMs = (input.length / this.sampleRate) * 1000;
 
-      // Voice Activity Detection (VAD) threshold check
-      // Human voice typically produces RMS > 0.015 through the bandpass filter
-      if (rms > 0.015) {
+      if (rms > SPEECH_START_RMS_THRESHOLD) {
         this.speechFramesCount++;
+        this.speechCandidateDurationMs += frameDurationMs;
+        if (!this.speechStartNotified) {
+          if (this.speechCandidateDurationMs >= SPEECH_START_MIN_DURATION_MS) {
+            this.speechStartNotified = true;
+            onSpeechStart?.();
+          }
+        }
+      } else if (!this.speechStartNotified) {
+        this.speechCandidateDurationMs = 0;
+        this.speechFramesCount = 0;
+      }
+
+      if (this.speechStartNotified && rms > SPEECH_CONTINUE_RMS_THRESHOLD) {
         this.silenceDurationMs = 0;
-      } else if (this.speechFramesCount > 0) {
-        this.silenceDurationMs += (input.length / this.sampleRate) * 1000;
-        if (this.silenceDurationMs >= 1100 && !this.speechEndNotified) {
+      } else if (this.speechStartNotified) {
+        this.silenceDurationMs += frameDurationMs;
+        if (this.silenceDurationMs >= SPEECH_END_SILENCE_MS && !this.speechEndNotified) {
           this.speechEndNotified = true;
           onSpeechEnd?.();
         }
       }
 
-      // Soft Noise Gate: zero out negligible room noise (< 0.003) to keep background pure
+      // Keep low-volume speech detail intact; browser noise suppression handles background noise.
       const filteredChunk = new Float32Array(input.length);
-      if (rms < 0.003) {
-        filteredChunk.fill(0);
-      } else {
-        filteredChunk.set(input);
-      }
+      filteredChunk.set(input);
 
       this.audioBuffers.push(filteredChunk);
-      if (this.partialAudioCallback && this.speechFramesCount > 0) {
-        this.partialAudioBuffers.push(filteredChunk);
-        this.partialAudioSampleCount += filteredChunk.length;
-        this.samplesSincePartial += filteredChunk.length;
-
-        while (this.partialAudioSampleCount > this.sampleRate * 3) {
-          const removed = this.partialAudioBuffers.shift();
-          if (!removed) break;
-          this.partialAudioSampleCount -= removed.length;
-        }
-
-        if (
-          this.partialAudioSampleCount >= this.sampleRate * 1.25 &&
-          this.samplesSincePartial >= this.sampleRate
-        ) {
-          this.samplesSincePartial = 0;
-          const partialSamples = this.mergeBuffers(
-            this.partialAudioBuffers,
-            this.partialAudioSampleCount
-          );
-          const partialWav = this.encodeWAV(partialSamples, this.sampleRate);
-          void this.blobToBase64(partialWav)
-            .then((audioBase64) => this.partialAudioCallback?.(audioBase64))
-            .catch((error: unknown) => {
-              console.error("Could not prepare partial speech for transcription:", error);
-            });
-        }
-      }
 
       // Calculate smooth volume level (0 to 100)
       if (this.volumeCallback) {
@@ -163,7 +152,6 @@ export class WavRecorder {
 
   async stop(): Promise<RecorderResult> {
     this.isRecording = false;
-    this.partialAudioCallback = null;
     const durationMs = Date.now() - this.startTime;
 
     if (this.processor) {
@@ -195,8 +183,7 @@ export class WavRecorder {
     const totalLength = this.audioBuffers.reduce((acc, buf) => acc + buf.length, 0);
     const merged = this.mergeBuffers(this.audioBuffers, totalLength);
 
-    // VAD evaluation: At least 2 speech frames detected, and duration > 400ms
-    const hasSpeech = this.speechFramesCount >= 2 && durationMs >= 400;
+    const hasSpeech = this.speechFramesCount >= 2 && durationMs >= 300;
 
     // Encode to 16-bit PCM WAV
     const wavBlob = this.encodeWAV(merged, this.sampleRate);

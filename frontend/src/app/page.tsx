@@ -9,7 +9,7 @@ import Google3DRealMap from "@/components/Google3DRealMap";
 import PopupVoiceChat from "@/components/PopupVoiceChat";
 import { LocationSelected } from "@/components/WorldMap";
 import { ChatMessage, exploreLocation } from "@/lib/api";
-import { Mail } from "lucide-react";
+import Footer from "@/components/Footer";
 import { useI18n } from "@/lib/i18n";
 
 export default function Home() {
@@ -43,7 +43,8 @@ export default function Home() {
   const handleNewMessage = (
     userText: string,
     botText: string,
-    audioBase64?: string | null
+    audioBase64?: string | null,
+    replaceLastUser = false
   ) => {
     setMessages((prev) => {
       const cleanUser = userText.trim();
@@ -52,15 +53,24 @@ export default function Home() {
 
       if (cleanUser) {
         const lastMsg = updated[updated.length - 1];
-        if (!lastMsg || lastMsg.role !== "user" || lastMsg.content !== cleanUser) {
+        if (replaceLastUser && lastMsg?.role === "user") {
+          updated[updated.length - 1] = { ...lastMsg, content: cleanUser };
+        } else if (!lastMsg || lastMsg.role !== "user" || lastMsg.content !== cleanUser) {
           updated.push({ role: "user", content: cleanUser });
         }
+      } else if (replaceLastUser && updated[updated.length - 1]?.role === "user") {
+        updated.pop();
       }
 
       if (cleanBot) {
         const lastMsg = updated[updated.length - 1];
         if (!lastMsg || lastMsg.role !== "assistant" || lastMsg.content !== cleanBot) {
           updated.push({ role: "assistant", content: cleanBot, audioBase64 });
+        }
+      } else if (audioBase64) {
+        const lastMsg = updated[updated.length - 1];
+        if (lastMsg?.role === "assistant") {
+          updated[updated.length - 1] = { ...lastMsg, audioBase64 };
         }
       }
 
@@ -76,12 +86,10 @@ export default function Home() {
   // Called when user clicks any place or coordinate on the dynamic World Map
   const handleLocationSelect = useCallback(
     async (loc: LocationSelected) => {
-      // 1. Always update selected location so the HUD and Chat show coordinates & place
+      // 1. Update selected location
       setSelectedLocation(loc);
 
-      // 2. Open chat window so user sees the selected region and action pills
-      setIsChatOpen(true);
-
+      // Do NOT auto-open chat box; keep it strictly under user control
       setIsExploring(true);
       setAgentSpeakingAudio(null);
 
@@ -117,6 +125,13 @@ export default function Home() {
 
         if (res.audio_base64) {
           setAgentSpeakingAudio(res.audio_base64);
+          let audioSrc = res.audio_base64;
+          if (!audioSrc.startsWith("data:")) {
+            const isMp3 = audioSrc.startsWith("//uQ") || audioSrc.startsWith("SUQz");
+            audioSrc = `data:${isMp3 ? "audio/mp3" : "audio/wav"};base64,${audioSrc}`;
+          }
+          const audio = new Audio(audioSrc);
+          audio.play().catch((playErr) => console.warn("Audio playback notice:", playErr));
         }
       } catch (err) {
         console.error("Explore location error:", err);
@@ -206,23 +221,7 @@ export default function Home() {
         />
       </section>
 
-      <footer className="w-full bg-black border-t border-white/10 py-5 px-6 text-white">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs sm:text-sm">
-          <span className="font-normal tracking-wide text-white/90">
-            {t.footerBrand}
-          </span>
-
-          <div className="flex items-center gap-4 font-normal">
-            <a
-              href="mailto:moalrobae@gmail.com"
-              className="flex items-center gap-1.5 text-white/80 hover:text-white transition-colors"
-            >
-              <Mail className="w-3.5 h-3.5" />
-              <span>moalrobae@gmail.com</span>
-            </a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </main>
   );
 }

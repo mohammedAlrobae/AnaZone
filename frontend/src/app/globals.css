@@ -1,6 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
 @import "tailwindcss";
-@import "leaflet/dist/leaflet.css";
 
 @keyframes mapPulse {
   0% {
@@ -62,31 +61,6 @@
   animation: mapPulse 1.8s infinite cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-.leaflet-container {
-  background-color: #78866b !important;
-  font-family: inherit !important;
-}
-
-.leaflet-bar {
-  border: none !important;
-  box-shadow: none !important;
-  border-radius: 6px !important;
-  overflow: hidden !important;
-}
-
-.leaflet-bar a {
-  color: #ffffff !important;
-  background-color: #78866b !important;
-  border: none !important;
-}
-
-.leaflet-bar a:hover {
-  background-color: #636f58 !important;
-}
-
-.leaflet-control-attribution {
-  display: none !important;
-}
 
 /* Keyboard accessibility: outline only on interactive focusable elements, never on text inputs */
 button:focus-visible, a:focus-visible {
@@ -159,4 +133,15 @@ button {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #3f3f46;
+}
+
+/* Hide Next.js Development Indicators & Toolbars */
+nextjs-portal,
+[data-nextjs-dev-indicator],
+[data-nextjs-toast],
+#nextjs-dev-indicator {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }

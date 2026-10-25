@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Mic, Volume2, VolumeX, Square, Loader2 } from "lucide-react";
 import { WavRecorder } from "@/lib/wavRecorder";
-import { sendVoicePipeline } from "@/lib/api";
+import { streamVoicePipeline } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
 interface VoiceAgentAreaProps {
@@ -27,6 +27,7 @@ export default function VoiceAgentArea({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [volumeLevel, setVolumeLevel] = useState<number>(0);
   const [activeSpeechText, setActiveSpeechText] = useState<string>("");
+  const [streamingReply, setStreamingReply] = useState<string>("");
 
   const recorderRef = useRef<WavRecorder | null>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -69,6 +70,13 @@ export default function VoiceAgentArea({
       });
     } catch (err: unknown) {
       console.error("Microphone error:", err);
+      const recorder = recorderRef.current;
+      recorderRef.current = null;
+      if (recorder) {
+        await recorder.stop().catch((cleanupError: unknown) => {
+          console.error("Microphone cleanup error:", cleanupError);
+        });
+      }
       setState("error");
       setErrorMessage("Could not access microphone. Please check browser permissions.");
     }
@@ -91,20 +99,26 @@ export default function VoiceAgentArea({
         return;
       }
 
-      // Call backend pipeline: faster-whisper Large-v3-Turbo -> Claude Sonnet 9 -> VoiceTut-TTS
-      const response = await sendVoicePipeline({
-        audioBase64: base64,
-        voice: selectedVoice,
-        history,
-        isMuted,
-      });
+      // Stream Cloudflare Whisper transcription and Groq response before Hugging Face TTS.
+      setStreamingReply("");
+      const response = await streamVoicePipeline(
+        {
+          audioBase64: base64,
+          voice: selectedVoice,
+          history,
+          isMuted,
+        },
+        (token) => setStreamingReply((previous) => previous + token),
+        (transcript) => onNewMessage(transcript, "")
+      );
 
       if (!response.user_text && !response.bot_text) {
         setState("idle");
         return;
       }
 
-      onNewMessage(response.user_text, response.bot_text, response.audio_base64);
+      onNewMessage("", response.bot_text, response.audio_base64);
+      setStreamingReply("");
       setActiveSpeechText(response.bot_text);
 
       // Play audio response if returned and not muted
@@ -115,6 +129,8 @@ export default function VoiceAgentArea({
       }
     } catch (err: unknown) {
       console.error("Pipeline error:", err);
+      setStreamingReply("");
+      onNewMessage("", t.chatErrorNotice, null);
       setState("error");
       setErrorMessage((err as Error)?.message || "Error processing voice request");
     }
@@ -219,6 +235,12 @@ export default function VoiceAgentArea({
                 transform: `scale(${1 + Math.min(volumeLevel / 50, 0.5)})`,
               }}
             />
+          )}
+
+          {streamingReply && (
+            <div className="mt-2 max-w-sm text-center px-4 py-2 text-xs text-gray-600" aria-live="polite">
+              {streamingReply}
+            </div>
           )}
 
           {/* Large Circle Button */}

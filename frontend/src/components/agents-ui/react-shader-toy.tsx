@@ -635,9 +635,10 @@ export function ReactShaderToy({
     gl.compileShader(shader);
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
       onWarning?.(log(`Error compiling the shader:\n${shaderCodeAsText}`));
-      const compilationLog = gl.getShaderInfoLog(shader);
+      const compilationLog = gl.getShaderInfoLog(shader) || 'No compiler details available';
       gl.deleteShader(shader);
       onError?.(log(`Shader compiler log: ${compilationLog}`));
+      return null;
     }
     return shader;
   };
@@ -658,6 +659,8 @@ export function ReactShaderToy({
           `Unable to initialize the shader program: ${gl.getProgramInfoLog(shaderProgramRef.current)}`,
         ),
       );
+      gl.deleteProgram(shaderProgramRef.current);
+      shaderProgramRef.current = null;
       return;
     }
     gl.useProgram(shaderProgramRef.current);
@@ -965,9 +968,9 @@ export function ReactShaderToy({
     return () => {
       const gl = glRef.current;
       if (gl) {
-        gl.getExtension('WEBGL_lose_context')?.loseContext();
         gl.useProgram(null);
         gl.deleteProgram(shaderProgramRef.current ?? null);
+        gl.deleteBuffer(squareVerticesBufferRef.current);
         if (textures.length > 0) {
           for (const texture of textures as Texture[]) {
             gl.deleteTexture(texture._webglTexture);

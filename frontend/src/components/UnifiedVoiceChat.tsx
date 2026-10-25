@@ -7,9 +7,7 @@ import {
   Square,
   Loader2,
   Send,
-  User,
   Mic,
-  MicOff,
   Power,
   Sparkles,
   Trash2,
@@ -18,16 +16,13 @@ import {
 } from "lucide-react";
 import { WavRecorder } from "@/lib/wavRecorder";
 import {
-  sendVoicePipeline,
-  sendChatMessage,
-  sendGreeting,
-  transcribeVoiceChunk,
+  streamVoicePipeline,
+  streamChatMessage,
   ChatMessage,
 } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { LocationSelected } from "./WorldMap";
 import { LiveAgentWave } from "@/components/agents-ui/LiveAgentWave";
-import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 
 interface UnifiedVoiceChatProps {
   selectedVoice: string;
@@ -35,7 +30,8 @@ interface UnifiedVoiceChatProps {
   onSendMessage: (
     userText: string,
     botText: string,
-    audioBase64?: string | null
+    audioBase64?: string | null,
+    replaceLastUser?: boolean
   ) => void;
   onClearChat?: () => void;
   activeLocation: LocationSelected | null;
@@ -44,24 +40,6 @@ interface UnifiedVoiceChatProps {
 }
 
 type AgentState = "disconnected" | "connecting" | "ready" | "listening" | "thinking" | "speaking";
-
-function mergeTranscript(previous: string, next: string): string {
-  const previousWords = previous.trim().split(/\s+/).filter(Boolean);
-  const nextWords = next.trim().split(/\s+/).filter(Boolean);
-  const normalize = (word: string) =>
-    word.toLocaleLowerCase().replace(/[^\p{L}\p{N}']/gu, "");
-  const maxOverlap = Math.min(previousWords.length, nextWords.length);
-
-  for (let overlap = maxOverlap; overlap > 0; overlap--) {
-    const suffix = previousWords.slice(-overlap).map(normalize);
-    const prefix = nextWords.slice(0, overlap).map(normalize);
-    if (suffix.every((word, index) => word === prefix[index])) {
-      return [...previousWords, ...nextWords.slice(overlap)].join(" ");
-    }
-  }
-
-  return [...previousWords, ...nextWords].join(" ");
-}
 
 export default function UnifiedVoiceChat({
   selectedVoice,
@@ -80,16 +58,10 @@ export default function UnifiedVoiceChat({
 
   // 2. UI & Messages State
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [volumeLevel, setVolumeLevel] = useState<number>(0);
   const [inputText, setInputText] = useState("");
   const [isTextLoading, setIsTextLoading] = useState(false);
-  const [liveTranscript, setLiveTranscript] = useState("");
+  const [streamingAssistantText, setStreamingAssistantText] = useState("");
   const [playingAudioIndex, setPlayingAudioIndex] = useState<number | null>(null);
-
-  // 3. LiveKit Cloud WebRTC
-  const [liveKitToken, setLiveKitToken] = useState<string>("");
-  const [liveKitUrl, setLiveKitUrl] = useState<string>("");
-  const [isLiveKitConnected, setIsLiveKitConnected] = useState<boolean>(false);
 
   // References
   const isConnectedRef = useRef(false);
@@ -97,14 +69,15 @@ export default function UnifiedVoiceChat({
   const isAgentVoiceMutedRef = useRef(false);
   const recorderRef = useRef<WavRecorder | null>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const speechQueueRef = useRef<string[]>([]);
+  const isSpeechQueuePlayingRef = useRef(false);
+  const isSpeechStreamActiveRef = useRef(false);
+  const playNextSpeechChunkRef = useRef<() => void>(() => {});
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const connectingLockRef = useRef(false);
-  const transcriptionSessionRef = useRef(0);
-  const partialTranscriptionBusyRef = useRef(false);
-  const pendingPartialAudioRef = useRef<{ audioBase64: string; session: number } | null>(null);
-  const liveTranscriptRef = useRef("");
-  const greetingPendingRef = useRef(false);
-  const hasGreetedRef = useRef(false);
+  const activeVoiceRequestRef = useRef<AbortController | null>(null);
+  const bargeInPendingRef = useRef(false);
+  const bargeInSpeechEndedRef = useRef(false);
   const processingRef = useRef(false);
   const stopListeningRef = useRef<() => void>(() => { });
   const resumeListeningRef = useRef<() => void>(() => { });
@@ -133,7 +106,6 @@ export default function UnifiedVoiceChat({
   }, [messages]);
 
   const handleClearChatClick = useCallback(() => {
-    hasGreetedRef.current = false;
     if (onClearChat) {
       onClearChat();
     }
@@ -172,10 +144,8 @@ export default function UnifiedVoiceChat({
 
   // Scroll messages (only when conversation messages are active)
   useEffect(() => {
-    if (messages.length > 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-  }, [messages, isTextLoading]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [messages, isTextLoading, streamingAssistantText]);
 
   const setAgentState = useCallback((newState: AgentState) => {
     setState(newState);
@@ -185,17 +155,12 @@ export default function UnifiedVoiceChat({
   }, [onAgentSpeakingChange]);
 
   const safelyPauseAudio = useCallback(() => {
+    speechQueueRef.current = [];
+    isSpeechQueuePlayingRef.current = false;
     if (currentAudioRef.current) {
       const audio = currentAudioRef.current;
-      if (playPromiseRef.current) {
-        playPromiseRef.current
-          .then(() => {
-            audio.pause();
-          })
-          .catch(() => { });
-      } else {
-        audio.pause();
-      }
+      audio.pause();
+      audio.currentTime = 0;
       currentAudioRef.current = null;
     }
     playPromiseRef.current = null;
@@ -212,55 +177,6 @@ export default function UnifiedVoiceChat({
     }
   }, [safelyPauseAudio, setAgentState]);
 
-  const updateLiveTranscription = useCallback(async (
-    audioBase64: string,
-    session: number
-  ) => {
-    if (
-      session !== transcriptionSessionRef.current ||
-      !isMicActiveRef.current ||
-      greetingPendingRef.current
-    ) {
-      return;
-    }
-
-    if (partialTranscriptionBusyRef.current) {
-      pendingPartialAudioRef.current = { audioBase64, session };
-      return;
-    }
-
-    partialTranscriptionBusyRef.current = true;
-    let request: { audioBase64: string; session: number } | null = { audioBase64, session };
-    try {
-      while (request && request.session === transcriptionSessionRef.current) {
-        try {
-          const result = await transcribeVoiceChunk(request.audioBase64);
-          if (
-            result.text.trim() &&
-            request.session === transcriptionSessionRef.current &&
-            isMicActiveRef.current
-          ) {
-            const merged = mergeTranscript(liveTranscriptRef.current, result.text.trim());
-            liveTranscriptRef.current = merged;
-            setLiveTranscript(merged);
-          }
-        } catch (error: unknown) {
-          console.error("Live Whisper transcription notice:", error);
-        }
-
-        request = pendingPartialAudioRef.current;
-        pendingPartialAudioRef.current = null;
-      }
-    } finally {
-      partialTranscriptionBusyRef.current = false;
-      const pending = pendingPartialAudioRef.current;
-      pendingPartialAudioRef.current = null;
-      if (pending && pending.session === transcriptionSessionRef.current) {
-        void updateLiveTranscription(pending.audioBase64, pending.session);
-      }
-    }
-  }, []);
-
   const playAudio = useCallback((base64Data: string, messageIndex: number) => {
     // If user muted agent voice, do not play
     if (isAgentVoiceMutedRef.current) {
@@ -271,7 +187,11 @@ export default function UnifiedVoiceChat({
       safelyPauseAudio();
       playingAudioIndexRef.current = null;
       setPlayingAudioIndex(null);
-      setAgentState(isMicActiveRef.current ? "listening" : "ready");
+      setAgentState(
+        isConnectedRef.current
+          ? isMicActiveRef.current ? "listening" : "ready"
+          : "disconnected"
+      );
       if (isMicActiveRef.current) resumeListeningRef.current();
       return;
     }
@@ -282,9 +202,11 @@ export default function UnifiedVoiceChat({
     playingAudioIndexRef.current = messageIndex;
     setPlayingAudioIndex(messageIndex);
 
-    const audioSrc = base64Data.startsWith("data:")
-      ? base64Data
-      : `data:audio/wav;base64,${base64Data}`;
+    let audioSrc = base64Data;
+    if (!base64Data.startsWith("data:")) {
+      const isMp3 = base64Data.startsWith("//uQ") || base64Data.startsWith("SUQz");
+      audioSrc = `data:${isMp3 ? "audio/mp3" : "audio/wav"};base64,${base64Data}`;
+    }
 
     const audio = new Audio(audioSrc);
     currentAudioRef.current = audio;
@@ -294,7 +216,11 @@ export default function UnifiedVoiceChat({
       setPlayingAudioIndex(null);
       currentAudioRef.current = null;
       playPromiseRef.current = null;
-      setAgentState(isMicActiveRef.current ? "listening" : "ready");
+      setAgentState(
+        isConnectedRef.current
+          ? isMicActiveRef.current ? "listening" : "ready"
+          : "disconnected"
+      );
     };
 
     audio.onerror = () => {
@@ -302,7 +228,11 @@ export default function UnifiedVoiceChat({
       setPlayingAudioIndex(null);
       currentAudioRef.current = null;
       playPromiseRef.current = null;
-      setAgentState(isMicActiveRef.current ? "listening" : "ready");
+      setAgentState(
+        isConnectedRef.current
+          ? isMicActiveRef.current ? "listening" : "ready"
+          : "disconnected"
+      );
     };
 
     const promise = audio.play();
@@ -319,13 +249,74 @@ export default function UnifiedVoiceChat({
     }
   }, [safelyPauseAudio, setAgentState]);
 
+  const playNextSpeechChunk = useCallback(() => {
+    const nextChunk = speechQueueRef.current.shift();
+    if (!nextChunk) {
+      isSpeechQueuePlayingRef.current = false;
+      currentAudioRef.current = null;
+      if (isSpeechStreamActiveRef.current) return;
+      setAgentState(isConnectedRef.current
+        ? isMicActiveRef.current ? "listening" : "ready"
+        : "disconnected");
+      if (isMicActiveRef.current) resumeListeningRef.current();
+      return;
+    }
+
+    isSpeechQueuePlayingRef.current = true;
+    setAgentState("speaking");
+    const audio = new Audio(`data:audio/wav;base64,${nextChunk}`);
+    currentAudioRef.current = audio;
+    let advanced = false;
+    const advanceQueue = () => {
+      if (advanced) return;
+      advanced = true;
+      currentAudioRef.current = null;
+      playPromiseRef.current = null;
+      isSpeechQueuePlayingRef.current = false;
+      playNextSpeechChunkRef.current();
+    };
+    audio.onended = advanceQueue;
+    audio.onerror = advanceQueue;
+
+    const promise = audio.play();
+    if (promise !== undefined) {
+      playPromiseRef.current = promise;
+      promise.catch((error: unknown) => {
+        console.warn("Speech playback notice:", error);
+        advanceQueue();
+      });
+    }
+  }, [setAgentState]);
+
+  useEffect(() => {
+    playNextSpeechChunkRef.current = playNextSpeechChunk;
+  }, [playNextSpeechChunk]);
+
+  const enqueueSpeechChunk = useCallback((audioBase64: string) => {
+    if (isAgentVoiceMutedRef.current) return;
+    speechQueueRef.current.push(audioBase64);
+    if (!isSpeechQueuePlayingRef.current) {
+      playNextSpeechChunkRef.current();
+    }
+  }, []);
+
+  const handlePlayAudioClick = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      const messageIndex = Number(event.currentTarget.dataset.audioIndex);
+      const message = dedupedMessages[messageIndex];
+      if (message?.audioBase64) {
+        playAudio(message.audioBase64, messageIndex);
+      }
+    },
+    [dedupedMessages, playAudio]
+  );
+
+
   useEffect(() => {
     if (agentSpeakingAudio) {
-      setIsConnected(true);
-      isConnectedRef.current = true;
-      playAudio(agentSpeakingAudio, -1);
+      playAudio(agentSpeakingAudio, messages.length > 0 ? messages.length - 1 : -1);
     }
-  }, [agentSpeakingAudio, playAudio]);
+  }, [agentSpeakingAudio, playAudio, messages.length]);
 
   // Clean up audio and microphone on unmount / popup close
   useEffect(() => {
@@ -338,12 +329,12 @@ export default function UnifiedVoiceChat({
     };
   }, [safelyPauseAudio]);
 
-  const startListening = useCallback(async () => {
+  const startListening = useCallback(async (
+    onSpeechStart?: () => void,
+    onSpeechEnd?: () => void,
+    autoSubmitOnSpeechEnd = false
+  ) => {
     if (recorderRef.current) return true;
-    const transcriptionSession = ++transcriptionSessionRef.current;
-    pendingPartialAudioRef.current = null;
-    liveTranscriptRef.current = "";
-    setLiveTranscript("");
     setErrorMessage(null);
     stopAudio();
 
@@ -352,42 +343,46 @@ export default function UnifiedVoiceChat({
       recorderRef.current = recorder;
       setAgentState("listening");
 
-      await recorder.start((vol) => {
-        setVolumeLevel(vol);
-      }, () => {
-        if (isMicActiveRef.current && !greetingPendingRef.current) {
+      await recorder.start(undefined, () => {
+        onSpeechEnd?.();
+        if (autoSubmitOnSpeechEnd && isMicActiveRef.current) {
           window.setTimeout(() => stopListeningRef.current(), 0);
         }
-      }, (audioBase64) => {
-        void updateLiveTranscription(audioBase64, transcriptionSession);
-      });
+      }, onSpeechStart);
       return true;
     } catch (err: unknown) {
       console.error("Microphone error:", err);
+      const recorder = recorderRef.current;
       recorderRef.current = null;
+      if (recorder) {
+        await recorder.stop().catch((cleanupError: unknown) => {
+          console.error("Microphone cleanup error:", cleanupError);
+        });
+      }
       setIsMicActive(false);
+      isMicActiveRef.current = false;
       setAgentState(isConnectedRef.current ? "ready" : "disconnected");
       setErrorMessage("Could not access microphone.");
       return false;
     }
-  }, [setAgentState, stopAudio, updateLiveTranscription]);
+  }, [setAgentState, stopAudio]);
 
   const stopListeningAndProcess = useCallback(async () => {
     if (!recorderRef.current || processingRef.current) return;
+    bargeInPendingRef.current = false;
+    bargeInSpeechEndedRef.current = false;
+    setIsMicActive(false);
+    isMicActiveRef.current = false;
     processingRef.current = true;
+    let voiceRequest: AbortController | null = null;
 
     try {
       setAgentState("thinking");
-      setVolumeLevel(0);
-      transcriptionSessionRef.current += 1;
-      pendingPartialAudioRef.current = null;
       const recorder = recorderRef.current;
       recorderRef.current = null;
       const { base64, hasSpeech } = await recorder.stop();
 
       if (!hasSpeech) {
-        liveTranscriptRef.current = "";
-        setLiveTranscript("");
         if (isMicActiveRef.current) {
           resumeListeningRef.current();
         } else {
@@ -405,102 +400,125 @@ export default function UnifiedVoiceChat({
         content: m.content,
       }));
 
-      const response = await sendVoicePipeline({
-        audioBase64: base64,
-        voice: selectedVoice,
-        history: historyPayload,
-        isMuted: isAgentVoiceMutedRef.current,
-        locationContext: locationContextStr,
-      });
+      setStreamingAssistantText("");
+      isSpeechStreamActiveRef.current = true;
+      const request = new AbortController();
+      voiceRequest = request;
+      activeVoiceRequestRef.current = request;
+      let replyCommitted = false;
+      let receivedAudioChunks = 0;
+      const response = await streamVoicePipeline(
+        {
+          audioBase64: base64,
+          voice: selectedVoice,
+          history: historyPayload,
+          isMuted: isAgentVoiceMutedRef.current,
+          locationContext: locationContextStr,
+        },
+        (token) => setStreamingAssistantText((previous) => previous + token),
+        (transcript) => {
+          if (transcript.trim()) onSendMessage(transcript, "");
+        },
+        (reply) => {
+          replyCommitted = true;
+          setIsTextLoading(false);
+          onSendMessage("", reply);
+          setStreamingAssistantText("");
+          if (isAgentVoiceMutedRef.current) {
+            setAgentState(isConnectedRef.current ? (isMicActiveRef.current ? "listening" : "ready") : "ready");
+          } else {
+            setAgentState("speaking");
+          }
+        },
+        (audioChunk) => {
+          receivedAudioChunks++;
+          enqueueSpeechChunk(audioChunk);
+        },
+        request.signal
+      );
+      if (activeVoiceRequestRef.current === request) {
+        activeVoiceRequestRef.current = null;
+      }
+      isSpeechStreamActiveRef.current = false;
 
       if (!response.user_text && !response.bot_text) {
+        setStreamingAssistantText("");
+        if (!isSpeechQueuePlayingRef.current) playNextSpeechChunkRef.current();
         if (isMicActiveRef.current) resumeListeningRef.current();
         else setAgentState(isConnectedRef.current ? "ready" : "disconnected");
         return;
       }
 
-      onSendMessage(response.user_text, response.bot_text, response.audio_base64);
-      liveTranscriptRef.current = "";
-      setLiveTranscript("");
-
-      if (response.audio_base64 && !isAgentVoiceMutedRef.current) {
-        playAudio(response.audio_base64, messages.length + 1);
-      } else if (isMicActiveRef.current) {
-        resumeListeningRef.current();
+      if (replyCommitted) {
+        onSendMessage("", "", response.audio_base64);
       } else {
-        setAgentState(isConnectedRef.current ? "ready" : "disconnected");
+        onSendMessage("", response.bot_text, response.audio_base64);
       }
-    } catch (err: unknown) {
-      console.error("Pipeline error:", err);
-      setAgentState(isConnectedRef.current ? "ready" : "disconnected");
-      setErrorMessage((err as Error)?.message || "Error processing voice request");
+      setStreamingAssistantText("");
+
+      if (response.audio_base64 && !isAgentVoiceMutedRef.current && receivedAudioChunks === 0) {
+        playAudio(response.audio_base64, messages.length + 1);
+      } else if (receivedAudioChunks === 0 && isMicActiveRef.current) {
+        resumeListeningRef.current();
+      } else if (receivedAudioChunks === 0) {
+        setAgentState(isConnectedRef.current ? "ready" : "disconnected");
+      } else {
+        if (!isSpeechQueuePlayingRef.current) playNextSpeechChunkRef.current();
+      }
+    } catch {
+      const wasInterrupted =
+        bargeInPendingRef.current ||
+        (voiceRequest?.signal.aborted ?? false);
+      if (activeVoiceRequestRef.current === voiceRequest) {
+        activeVoiceRequestRef.current = null;
+      }
+      isSpeechStreamActiveRef.current = false;
+      if (wasInterrupted) return;
+      console.error("Voice pipeline request failed");
+      setStreamingAssistantText("");
+      onSendMessage("", t.chatErrorNotice, null);
+      if (isMicActiveRef.current) resumeListeningRef.current();
+      else setAgentState(isConnectedRef.current ? "ready" : "disconnected");
+      setErrorMessage(t.chatErrorNotice);
     } finally {
       processingRef.current = false;
+      if (
+        bargeInPendingRef.current &&
+        bargeInSpeechEndedRef.current &&
+        recorderRef.current
+      ) {
+        window.setTimeout(() => stopListeningRef.current(), 0);
+      }
     }
-  }, [activeLocation, messages, onSendMessage, playAudio, selectedVoice, setAgentState]);
+  }, [activeLocation, enqueueSpeechChunk, messages, onSendMessage, playAudio, selectedVoice, setAgentState, t.chatErrorNotice]);
 
   useEffect(() => {
     stopListeningRef.current = () => {
       void stopListeningAndProcess();
     };
     resumeListeningRef.current = () => {
-      if (!isMicActiveRef.current || recorderRef.current) return;
+      if (!isMicActiveRef.current) return;
+      if (recorderRef.current) {
+        setAgentState("listening");
+        return;
+      }
       window.setTimeout(() => {
         if (isMicActiveRef.current && !recorderRef.current) {
           void startListening();
         }
       }, 250);
     };
-  }, [startListening, stopListeningAndProcess]);
+  }, [setAgentState, startListening, stopListeningAndProcess]);
 
-  // Connect Agent Session (Separated from Mic)
-  const connectAgent = async () => {
+  // Connect locally first; optional WebRTC setup must not delay microphone access.
+  const connectAgent = () => {
     if (connectingLockRef.current || isConnectedRef.current) return;
     connectingLockRef.current = true;
+    isConnectedRef.current = true;
     setIsConnected(true);
-    setAgentState("connecting");
+    setAgentState("ready");
     setErrorMessage(null);
-
-    // Fetch LiveKit token in background
-    try {
-      const roomName = `anazone-${selectedVoice}`;
-      const tokenRes = await fetch(`/api/livekit/token?room=${encodeURIComponent(roomName)}`);
-      if (tokenRes.ok) {
-        const tokenData = await tokenRes.json();
-        if (tokenData.token && tokenData.url) {
-          setLiveKitToken(tokenData.token);
-          setLiveKitUrl(tokenData.url);
-          setIsLiveKitConnected(true);
-        }
-      }
-    } catch (e) {
-      console.warn("LiveKit connection notice:", e);
-    }
-
-    try {
-      if (!hasGreetedRef.current && messages.length === 0) {
-        hasGreetedRef.current = true;
-        setAgentState("thinking");
-        greetingPendingRef.current = true;
-        const greeting = await sendGreeting({ voice: selectedVoice, language });
-        greetingPendingRef.current = false;
-        onSendMessage("", greeting.reply, greeting.audio_base64);
-
-        if (greeting.audio_base64 && !isAgentVoiceMutedRef.current) {
-          playAudio(greeting.audio_base64, 0);
-        } else {
-          setAgentState("ready");
-        }
-      } else {
-        setAgentState("ready");
-      }
-    } catch (err: unknown) {
-      console.error("Greeting notice:", err);
-      greetingPendingRef.current = false;
-      setAgentState("ready");
-    } finally {
-      connectingLockRef.current = false;
-    }
+    connectingLockRef.current = false;
   };
 
   // Disconnect Agent Session
@@ -511,41 +529,56 @@ export default function UnifiedVoiceChat({
       recorderRef.current = null;
     }
     setIsConnected(false);
+    isConnectedRef.current = false;
     setIsMicActive(false);
-    setIsLiveKitConnected(false);
+    isMicActiveRef.current = false;
     setAgentState("disconnected");
-    setLiveTranscript("");
-    setVolumeLevel(0);
   };
 
   // Microphone Toggle (Independent Control)
   const toggleMicrophone = async () => {
     if (!isConnectedRef.current) {
-      await connectAgent();
-      setIsMicActive(true);
-      await startListening();
-      return;
+      connectAgent();
     }
 
     if (isMicActiveRef.current) {
-      // User wants to mute/pause mic
+      // Stopping a recording submits the complete utterance for transcription.
       setIsMicActive(false);
-      if (recorderRef.current) {
-        const recorder = recorderRef.current;
-        recorderRef.current = null;
-        await recorder.stop();
-        setVolumeLevel(0);
-      }
-      setLiveTranscript("");
-      if (state === "listening") {
-        setAgentState("ready");
-      }
+      isMicActiveRef.current = false;
+      await stopListeningAndProcess();
     } else {
-      // User wants to unmute mic & speak
       setIsMicActive(true);
-      if (state !== "thinking" && state !== "speaking") {
-        await startListening();
-      }
+      isMicActiveRef.current = true;
+      const isInterrupting =
+        isSpeechStreamActiveRef.current ||
+        isSpeechQueuePlayingRef.current ||
+        Boolean(currentAudioRef.current && !currentAudioRef.current.paused);
+      await startListening(
+        isInterrupting
+          ? () => {
+              const activeRequest = activeVoiceRequestRef.current;
+              if (!activeRequest && !isSpeechQueuePlayingRef.current && !currentAudioRef.current) {
+                return;
+              }
+              bargeInPendingRef.current = true;
+              bargeInSpeechEndedRef.current = false;
+              activeRequest?.abort();
+              activeVoiceRequestRef.current = null;
+              isSpeechStreamActiveRef.current = false;
+              playingAudioIndexRef.current = null;
+              setPlayingAudioIndex(null);
+              setStreamingAssistantText("");
+              safelyPauseAudio();
+              setAgentState("listening");
+            }
+          : undefined,
+        () => {
+          if (bargeInPendingRef.current) {
+            bargeInSpeechEndedRef.current = true;
+          }
+        },
+        isInterrupting
+      );
     }
   };
 
@@ -577,7 +610,10 @@ export default function UnifiedVoiceChat({
       setInputText("");
     }
     setIsTextLoading(true);
+    isSpeechStreamActiveRef.current = true;
     setAgentState("thinking");
+    setStreamingAssistantText("");
+    onSendMessage(text, "");
 
     try {
       const locationContextStr = activeLocation
@@ -589,27 +625,63 @@ export default function UnifiedVoiceChat({
         content: m.content,
       }));
 
-      const res = await sendChatMessage({
-        message: text,
-        voice: selectedVoice,
-        history: historyPayload,
-        isMuted: isAgentVoiceMutedRef.current,
-        locationContext: locationContextStr,
-      });
+      let replyCommitted = false;
+      let receivedAudioChunks = 0;
+      const res = await streamChatMessage(
+        {
+          message: text,
+          voice: selectedVoice,
+          history: historyPayload,
+          isMuted: isAgentVoiceMutedRef.current,
+          locationContext: locationContextStr,
+        },
+        (token) => setStreamingAssistantText((previous) => previous + token),
+        (reply) => {
+          replyCommitted = true;
+          setIsTextLoading(false);
+          onSendMessage("", reply);
+          setStreamingAssistantText("");
+          if (isAgentVoiceMutedRef.current) {
+            setAgentState(isConnectedRef.current ? (isMicActiveRef.current ? "listening" : "ready") : "ready");
+          } else {
+            setAgentState("speaking");
+          }
+        },
+        (audioChunk) => {
+          receivedAudioChunks++;
+          enqueueSpeechChunk(audioChunk);
+        }
+      );
+      isSpeechStreamActiveRef.current = false;
 
-      onSendMessage(text, res.reply, res.audio_base64);
-
-      if (res.audio_base64 && !isAgentVoiceMutedRef.current) {
-        playAudio(res.audio_base64, messages.length + 1);
+      if (replyCommitted) {
+        onSendMessage("", "", res.audio_base64);
       } else {
-        setAgentState(isMicActiveRef.current ? "listening" : "ready");
+        onSendMessage("", res.reply, res.audio_base64);
       }
-    } catch (err: unknown) {
-      console.error("Chat error:", err);
-      onSendMessage(text, t.chatErrorNotice, null);
-      setAgentState(isMicActiveRef.current ? "listening" : "ready");
+      setStreamingAssistantText("");
+
+      if (res.audio_base64 && !isAgentVoiceMutedRef.current && receivedAudioChunks === 0) {
+        playAudio(res.audio_base64, messages.length + 1);
+      } else if (receivedAudioChunks === 0) {
+        setAgentState(isMicActiveRef.current ? "listening" : "ready");
+      } else {
+        if (!isSpeechQueuePlayingRef.current) playNextSpeechChunkRef.current();
+      }
+    } catch {
+      isSpeechStreamActiveRef.current = false;
+      console.error("Chat request failed");
+      setStreamingAssistantText("");
+      onSendMessage("", t.chatErrorNotice, null);
     } finally {
       setIsTextLoading(false);
+      if (!isSpeechQueuePlayingRef.current && !currentAudioRef.current) {
+        setAgentState(
+          isConnectedRef.current
+            ? isMicActiveRef.current ? "listening" : "ready"
+            : "disconnected"
+        );
+      }
     }
   };
 
@@ -727,7 +799,10 @@ export default function UnifiedVoiceChat({
 
       {/* 2. Messages Stream Area (Simple, Sleek, Deduplicated) */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain mt-3 pr-1 space-y-2.5">
-        {dedupedMessages.length === 0 && !liveTranscript && !isTextLoading ? (
+        {dedupedMessages.length === 0 &&
+        !streamingAssistantText &&
+        state !== "thinking" &&
+        !isTextLoading ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-4 text-white/50 select-none">
             <Sparkles className="w-5 h-5 mb-2 text-white/40" />
             <p className="text-xs text-white/80 font-medium">
@@ -771,7 +846,8 @@ export default function UnifiedVoiceChat({
                       </span>
                       <button
                         type="button"
-                        onClick={() => playAudio(msg.audioBase64!, index)}
+                        onClick={handlePlayAudioClick}
+                        data-audio-index={index}
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] transition-all cursor-pointer border ${
                           isAudioPlaying
                             ? "bg-blue-600/30 text-blue-200 border-blue-400/40"
@@ -798,15 +874,18 @@ export default function UnifiedVoiceChat({
           })
         )}
 
-        {liveTranscript && (
-          <div className="flex justify-end" aria-live="polite">
-            <div className="max-w-[85%] rounded-xl bg-zinc-900/80 border border-white/20 px-4 py-3 text-sm leading-relaxed text-white">
-              <p className="whitespace-pre-wrap" dir="auto">{liveTranscript}</p>
+        {streamingAssistantText && (
+          <div className="flex w-full justify-start" aria-live="polite">
+            <div className="max-w-[85%] rounded-2xl rounded-tl-none bg-white/10 border border-white/15 px-3.5 py-2.5 text-xs sm:text-sm leading-relaxed text-white/95">
+              <p className="whitespace-pre-wrap" dir="auto">
+                {streamingAssistantText}
+                <span className="inline-block w-1.5 h-3 ml-1 bg-cyan-400 animate-pulse align-middle" />
+              </p>
             </div>
           </div>
         )}
 
-        {isTextLoading && (
+        {isTextLoading && !streamingAssistantText && (!messages.length || messages[messages.length - 1]?.role === "user") && (
           <div className="flex gap-2.5 justify-start">
             <div className="w-7 h-7 rounded-full bg-zinc-900 border border-white/20 text-white flex items-center justify-center shrink-0">
               <Volume2 className="w-3.5 h-3.5 text-white" />
@@ -859,12 +938,15 @@ export default function UnifiedVoiceChat({
         <button
           type="button"
           onClick={() => void toggleMicrophone()}
-          disabled={state === "thinking"}
-          aria-label={isMicActive ? "Mute Microphone" : "Unmute Microphone"}
+          aria-label={
+            isMicActive
+              ? (language === "ar" ? "إيقاف التسجيل وإرساله" : "Stop and send recording")
+              : (language === "ar" ? "بدء التسجيل الصوتي" : "Start voice recording")
+          }
           title={
             isMicActive
-              ? (language === "ar" ? "الميكروفون قيد الاستماع (انقر للكتم)" : "Microphone Active (Click to mute)")
-              : (language === "ar" ? "الميكروفون مكتوم (انقر للتحدث)" : "Microphone Muted (Click to talk)")
+              ? (language === "ar" ? "إيقاف التسجيل وإرسال الصوت" : "Stop recording and send audio")
+              : (language === "ar" ? "ابدأ التسجيل بالضغط هنا" : "Click to start recording")
           }
           className={`p-2.5 rounded-lg transition-all duration-200 cursor-pointer shrink-0 flex items-center justify-center outline-none focus:outline-none focus:ring-0 ${
             !isConnected
@@ -874,11 +956,14 @@ export default function UnifiedVoiceChat({
               : "bg-white/10 text-white/80 hover:bg-white/15 hover:text-white"
           }`}
         >
-          {isMicActive ? (
-            <Mic className="w-4 h-4 text-white" />
-          ) : (
-            <MicOff className="w-4 h-4 text-white/80" />
-          )}
+          {isMicActive
+            ? <Square className="w-4 h-4 fill-current text-white" />
+            : <Mic className="w-4 h-4 text-white/80" />}
+          <span className="ml-1.5 text-[11px] whitespace-nowrap">
+            {isMicActive
+              ? (language === "ar" ? "إيقاف وإرسال" : "Stop & send")
+              : (language === "ar" ? "ابدأ التسجيل" : "Record")}
+          </span>
         </button>
 
         {/* Control B: Agent Voice / Speaker Toggle (Agent Voice Output) */}
@@ -926,26 +1011,6 @@ export default function UnifiedVoiceChat({
           <Send className="w-4 h-4 text-white" />
         </button>
       </form>
-
-      {/* Hidden LiveKit WebRTC Session Manager for Cloud Audio Transport */}
-      {liveKitToken && (
-        <LiveKitRoom
-          token={liveKitToken}
-          serverUrl={liveKitUrl}
-          connect={isLiveKitConnected}
-          audio={true}
-          video={false}
-          onConnected={() => {
-            console.log("LiveKit Cloud WebRTC connected successfully");
-          }}
-          onDisconnected={() => {
-            console.log("LiveKit Cloud WebRTC disconnected");
-            setIsLiveKitConnected(false);
-          }}
-        >
-          <RoomAudioRenderer />
-        </LiveKitRoom>
-      )}
     </div>
   );
 }

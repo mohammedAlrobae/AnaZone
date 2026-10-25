@@ -1,6 +1,6 @@
 import re
 import logging
-from typing import TypedDict, Optional, List, Dict, Any, Literal
+from typing import TypedDict, Optional, List, Dict, Any, Callable, Literal
 import requests
 from langgraph.graph import StateGraph, START, END
 
@@ -79,6 +79,7 @@ class AgentState(TypedDict, total=False):
     is_place_specific: Optional[bool]
     news_place_target: Optional[str]
     reply_text: str
+    on_token: Optional[Callable[[str], None]]
 
 
 def fetch_open_meteo_weather(lat: float, lng: float) -> Optional[Dict[str, Any]]:
@@ -108,6 +109,21 @@ def fetch_open_meteo_weather(lat: float, lng: float) -> Optional[Dict[str, Any]]
             }
     except Exception as e:
         logger.warning(f"Open-Meteo fetch error: {e}")
+    return None
+
+
+def geocode_city_open_meteo(query: str) -> Optional[tuple[float, float, str]]:
+    """Geocode a city or country using free Open-Meteo Geocoding API without API keys."""
+    try:
+        url = "https://geocoding-api.open-meteo.com/v1/search"
+        res = requests.get(url, params={"name": query, "count": 1, "language": "ar"}, timeout=5)
+        if res.status_code == 200:
+            results = res.json().get("results")
+            if results and len(results) > 0:
+                first = results[0]
+                return float(first["latitude"]), float(first["longitude"]), first.get("name") or query
+    except Exception as e:
+        logger.warning(f"Open-Meteo geocoding error for '{query}': {e}")
     return None
 
 
@@ -276,9 +292,27 @@ def weather_node(state: AgentState) -> Dict[str, Any]:
     lng = state.get("lng")
     loc_name = state.get("location_name") or "هذا الموقع"
     is_ar = state.get("language") != "en"
+    user_msg = state.get("user_message") or ""
 
-    # Default coordinates fallback if somehow unprovided
-    if lat is None or lng is None:
+    # Check if user mentioned a specific city/place in their message (e.g. 'في دبي' or 'in Paris')
+    m_ar = re.search(r"(?:في|عن|بـ|ب)\s+([^\s\?\.،!؟]+)", user_msg)
+    m_en = re.search(r"(?:in|about|from)\s+([a-zA-Z]+)", user_msg, re.IGNORECASE)
+    stop_words = {"هنا", "اليوم", "الآن", "الان", "الموقع", "هذا", "هذه", "البلد", "العالم", "الطقس", "الجو", "حرارة", "here", "today", "now", "this", "world", "weather"}
+    cand = None
+    if m_ar:
+        cand_word = m_ar.group(1).strip("؟?.،!:, ")
+        if cand_word.lower() not in stop_words and len(cand_word) > 2:
+            cand = cand_word
+    elif m_en:
+        cand_word = m_en.group(1).strip("?.!,: ")
+        if cand_word.lower() not in stop_words and len(cand_word) > 2:
+            cand = cand_word
+
+    if cand:
+        geo = geocode_city_open_meteo(cand)
+        if geo:
+            lat, lng, loc_name = geo
+    elif lat is None or lng is None:
         lat, lng = 32.03, 35.73
 
     weather = fetch_open_meteo_weather(lat, lng)
@@ -322,7 +356,16 @@ def weather_node(state: AgentState) -> Dict[str, Any]:
             f"Do not use emojis, asterisks (*), or tables as this will be read aloud by TTS."
         )
 
-    reply = llm_service.chat_completion([{"role": "user", "content": prompt}], max_tokens=180)
+    weather_messages = []
+    for m in (state.get("history") or [])[-4:]:
+        weather_messages.append({"role": m.get("role", "user"), "content": m.get("content", "")})
+    weather_messages.append({"role": "user", "content": prompt})
+
+    reply = llm_service.chat_completion(
+        weather_messages,
+        max_tokens=180,
+        on_token=state.get("on_token"),
+    )
     return {"weather_data": weather, "reply_text": reply}
 
 
@@ -389,7 +432,16 @@ def news_node(state: AgentState) -> Dict[str, Any]:
                 f"Do not use emojis, asterisks (*), or tables as this will be read aloud by TTS."
             )
 
-    reply = llm_service.chat_completion([{"role": "user", "content": prompt}], max_tokens=220)
+    news_messages = []
+    for m in (state.get("history") or [])[-4:]:
+        news_messages.append({"role": m.get("role", "user"), "content": m.get("content", "")})
+    news_messages.append({"role": "user", "content": prompt})
+
+    reply = llm_service.chat_completion(
+        news_messages,
+        max_tokens=220,
+        on_token=state.get("on_token"),
+    )
     return {
         "news_data": articles,
         "reply_text": reply,
@@ -411,23 +463,40 @@ def general_info_node(state: AgentState) -> Dict[str, Any]:
     is_ar = state.get("language") != "en"
 
     # Contextual prompt
-    system_instruction = (
-        f"You are a knowledgeable, friendly world explorer and AI companion.\n"
-        f"The user is exploring: {loc_name or 'the world globe'} (Country: {country or 'N/A'}).\n"
-        f"Important Guidelines:\n"
-        f"1. Be helpful, concise (2-3 sentences), and culturally respectful.\n"
-        f"2. If the user asks something you do not know or that cannot be verified about this location, "
-        f"honestly and politely tell them you do not have that specific information rather than guessing.\n"
-        f"3. Speak naturally in {'friendly Egyptian Arabic' if is_ar else 'warm English'}.\n"
-        f"4. Do not use emojis, asterisks (*), or tables as this will be read aloud by TTS."
-    )
-
+    if is_ar:
+        system_instruction = (
+            f"أنت مساعد ودود ومرشد للعالم. الموقع الذي يستكشفه المستخدم: "
+            f"{loc_name or 'الكرة الأرضية'} (الدولة: {country or 'غير محددة'}).\n"
+            "أجب بلغة رسالة المستخدم نفسها، ولا تترجم كلامه أو تربط لغة الرد بلغة واجهة الصفحة. "
+            "لا تترجم إلا إذا طلب المستخدم ذلك صراحةً.\n"
+            "أجب بلهجة مصرية بسيطة وباختصار في جملتين أو ثلاث.\n"
+            "لا تخترع معلومات تاريخية أو جغرافية أو أرقاماً أو مصادر. الموقع أو الإحداثيات وحدها "
+            "لا تثبت أي معلومة. إذا لم تكن واثقاً من صحة الإجابة، قل بوضوح إنك لا تعرف أو أنك "
+            "غير متأكد بدلاً من التخمين.\n"
+            "لا تستخدم إيموجي أو نجوم أو جداول."
+        )
+    else:
+        system_instruction = (
+            f"You are a knowledgeable, friendly world explorer and AI companion.\n"
+            f"The user is exploring: {loc_name or 'the world globe'} (Country: {country or 'N/A'}).\n"
+            "Reply in the same language as the user's message, regardless of the website interface language. "
+            "Do not translate the user's words unless explicitly asked.\n"
+            "Be helpful, concise (2-3 sentences), and culturally respectful. Do not invent "
+            "historical or geographic facts, numbers, or sources. A location or coordinates alone "
+            "do not verify a claim. If you are unsure, say so instead of guessing.\n"
+            "Do not use emojis, asterisks (*), or tables as this will be read aloud by TTS."
+        )
+    #Compact 
     messages = [{"role": "system", "content": system_instruction}]
     for m in history[-6:]:
         messages.append({"role": m.get("role", "user"), "content": m.get("content", "")})
     messages.append({"role": "user", "content": user_msg})
 
-    reply = llm_service.chat_completion(messages, max_tokens=250)
+    reply = llm_service.chat_completion(
+        messages,
+        max_tokens=250,
+        on_token=state.get("on_token"),
+    )
     return {"reply_text": reply}
 
 

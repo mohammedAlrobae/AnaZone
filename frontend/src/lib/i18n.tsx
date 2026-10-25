@@ -56,7 +56,6 @@ export interface Translations {
   muteMicrophone: string;
   unmuteMicrophone: string;
   microphoneMuted: string;
-  liveTranscriptError: string;
   voiceActive: string;
   voiceMuted: string;
   voiceMutedTooltip: string;
@@ -96,8 +95,17 @@ export interface Translations {
   deepQASuggestions: string[];
   soundwaveTitle: string;
 
-  // Footer
+  // Footer & Legal
   footerBrand: string;
+  footerRights: string;
+  footerPrivacy: string;
+  footerTerms: string;
+  footerStatus: string;
+  footerDocs: string;
+  privacyModalTitle: string;
+  privacyModalBody: string;
+  termsModalTitle: string;
+  termsModalBody: string;
 }
 
 const translations: Record<Language, Translations> = {
@@ -109,8 +117,8 @@ const translations: Record<Language, Translations> = {
     aboutModalBody: "AnaZone is a next-generation planetary intelligence platform that bridges real-time voice conversation with photorealistic 3D Earth exploration.\n\nBuilt around natural human dialogue, our intelligent companion listens with sub-second Whisper recognition, reasons with high-capacity neural models, and speaks with authentic, emotionally nuanced voices in both Egyptian Arabic and English.\n\nTravel across continents or select any city, historical landmark, or natural wonder on the 3D globe to receive an immediate, immersive spoken briefing—enriched with live atmospheric weather data, real-time regional news, and rich cultural context.\n\nPowered entirely by distributed cloud neural pipelines, AnaZone delivers instant speech recognition, low-latency WebRTC streaming, and grounded planetary awareness in a unified, fluid experience.",
     close: "Close",
 
-    heroTitle: "Voice Companion & World Explorer",
-    heroSubtitle: "Natural voice conversations and interactive world exploration.",
+    heroTitle: "Every Coordinate Has a Story",
+    heroSubtitle: "Touch anywhere on the 3D globe to hear live breaking news, local weather, and rich history in natural human speech",
     heroCta: "Start Voice Chat",
     heroJumpHint: "Click the arrow to jump down to the voice agent section",
 
@@ -160,7 +168,6 @@ const translations: Record<Language, Translations> = {
     micInputInfo: "Tap to talk",
     outputVoiceLabel: "Voice",
     noSpeechError: "No speech detected. Please speak closer to the microphone.",
-    liveTranscriptError: "Live transcription is temporarily unavailable.",
 
     chatTitle: "Interactive Conversation",
     chatMutedMode: "Muted mode (text only)",
@@ -172,7 +179,7 @@ const translations: Record<Language, Translations> = {
     replayAudio: "Replay Voice",
     stopAudio: "Stop Voice",
     synthesizingWith: "Synthesizing with",
-    chatErrorNotice: "Could not reach the server. Please check connection.",
+    chatErrorNotice: "Sorry, we couldn't complete your request. Please try again.",
     suggestions: [
       "What are the most famous landmarks you recommend?",
       "Tell me about the history of the Pyramids",
@@ -196,6 +203,15 @@ const translations: Record<Language, Translations> = {
     soundwaveTitle: "Live Voice Waveform & Microphone",
 
     footerBrand: "AnaZone",
+    footerRights: "All rights reserved.",
+    footerPrivacy: "Privacy Policy",
+    footerTerms: "Terms of Service",
+    footerStatus: "Systems Operational",
+    footerDocs: "Architecture",
+    privacyModalTitle: "Privacy Policy",
+    privacyModalBody: "AnaZone is built on privacy-first, zero-retention principles.\n\n• Ephemeral In-Memory Sessions: We do not store, record, or persist your voice clips, spoken audio, or conversation history in any persistent database. When your session ends or you refresh the page, all transient states are completely wiped.\n\n• Microphones & Audio Processing: Microphone access is strictly used locally in your browser for real-time speech processing. No biometric voiceprints are retained.\n\n• Third-Party APIs: Geographic queries and weather requests are processed statelessly via Open-Meteo and Google Maps Platform without user profiling.",
+    termsModalTitle: "Terms of Service",
+    termsModalBody: "By using AnaZone, you agree to our terms of service:\n\n• Non-Commercial Exploration: AnaZone is an AI voice companion and 3D geospatial intelligence exploration platform designed for research, discovery, and demonstration.\n\n• AI Voice Generation: Voice synthesis is powered by neural diffusion models. Information provided by the AI is synthesized from real-time data feeds and is for informational purposes.\n\n• Fair Usage: Users agree not to abuse voice synthesis or automated streaming endpoints.",
   },
 
   ar: {
@@ -206,8 +222,8 @@ const translations: Record<Language, Translations> = {
     aboutModalBody: "أنا زون (AnaZone) هي منصة استكشافية ذكية من الجيل القادم، تجمع بسلاسة بين المحادثة الصوتية الحية واستكشاف كوكب الأرض ثلاثي الأبعاد بدقة فائقة.\n\nصُمم الرفيق الذكي ليحاكي الحوار البشري الطبيعي؛ حيث يستمع إليك في أجزاء من الثانية عبر نموذج Whisper فائق السرعة، ويفكر عبر نماذج ذكاء اصطناعي عملاقة، ويتحدث بنبرات صوتية طبيعية وجذابة بالعامية المصرية الأصيلة واللغة الإنجليزية مع الحفاظ التام على هوية الصوت.\n\nحلّق عبر القارات واختر أي مدينة أو معلم تاريخي على مجسم الأرض لتستمع فوراً إلى إحاطة صوتية تفاعلية غنية بالمعلومات الثقافية والتاريخية، مدعومة بتحديثات الطقس الحية وأحدث الأخبار الإقليمية اللحظية.\n\nتعتمد المنصة بالكامل على بنية سحابية متقدمة تدمج النماذج العصبية فائقة السرعة مع تقنيات البث الصوتي الفوري عبر WebRTC لتقديم تجربة استكشاف عالمية استثنائية.",
     close: "إغلاق",
 
-    heroTitle: "رفيقك الصوتي واستكشاف العالم",
-    heroSubtitle: "محادثات صوتية طبيعية واستكشاف تفاعلي لمعالم العالم.",
+    heroTitle: "لكل زاوية في العالم حكاية.. اسمعها فوراً",
+    heroSubtitle: "انقر على أي مدينة حول العالم، واستمع لإحاطة صوتية شيقة تجمع بين طقسها اللحظي، أحدث أخبارها، وتاريخها العريق",
     heroCta: "ابدأ المحادثة الصوتية",
     heroJumpHint: "اضغط على السهم للانتقال مباشرة إلى قسم التحدث",
 
@@ -257,7 +273,6 @@ const translations: Record<Language, Translations> = {
     micInputInfo: "اضغط لبدء الحديث",
     outputVoiceLabel: "الصوت",
     noSpeechError: "لم يتم التقاط صوت واضح. يرجى التحدث بالقرب من الميكروفون.",
-    liveTranscriptError: "التفريغ المباشر غير متاح مؤقتًا.",
 
     chatTitle: "المحادثة التفاعلية",
     chatMutedMode: "الوضع الصامت (نصوص فقط)",
@@ -269,7 +284,7 @@ const translations: Record<Language, Translations> = {
     replayAudio: "إعادة الصوت",
     stopAudio: "إيقاف الصوت",
     synthesizingWith: "جارٍ الرد بصوت",
-    chatErrorNotice: "تعذر الاتصال بالسيرفر. يرجى التأكد من تشغيل الباك إند.",
+    chatErrorNotice: "عذراً، تعذر إكمال طلبك الآن. يرجى المحاولة مرة أخرى.",
     suggestions: [
       "إيه أشهر المعالم اللي تنصحني أزورها؟",
       "احكيلي عن تاريخ الأهرامات وبنائها",
@@ -293,6 +308,15 @@ const translations: Record<Language, Translations> = {
     soundwaveTitle: "الموجات الصوتية الحية والميكروفون",
 
     footerBrand: "AnaZone",
+    footerRights: "جميع الحقوق محفوظة.",
+    footerPrivacy: "سياسة الخصوصية",
+    footerTerms: "شروط الخدمة",
+    footerStatus: "الأنظمة تعمل بكفاءة",
+    footerDocs: "المخطط الهيكلي",
+    privacyModalTitle: "سياسة الخصوصية",
+    privacyModalBody: "تعتمد منصة AnaZone على مبادئ الخصوصية الصارمة وعدم الاحتفاظ بالبيانات (Zero-Retention):\n\n• جلسات مؤقتة في الذاكرة: لا نقوم بتسجيل أو تخزين محادثاتك أو مقاطعك الصوتية في أي قاعدة بيانات دائمة. بمجرد إغلاق المتصفح أو تحديث الصفحة، يتم مسح سجل المحادثة بالكامل.\n\n• معالجة الصوت والميكروفون: إذن الميكروفون يُستخدم محلياً فقط داخل المتصفح لإرسال المقاطع الصوتية اللحظية دون إنشاء بصمات صوتية.\n\n• خدمات الطرف الثالث: استفسارات الطقس والمواقع الجغرافية تُعالج بصورة مجهولة عبر Open-Meteo وخرائط جوجل دون أي تتبع لسلوك المستخدم.",
+    termsModalTitle: "شروط الخدمة",
+    termsModalBody: "باستخدامك لمنصة AnaZone، فإنك توافق على الشروط والأحكام التالية:\n\n• الاستخدام الاستكشافي: AnaZone منصة ذكية تجمع بين رفيق صوتي واستكشاف تفاعلي لكوكب الأرض مخصصة لأغراض الاستكشاف والمعرفة.\n\n• التوليد الصوتي الذكي: يتم توليد الأصوات والمعلومات عبر نماذج عصبية متقدمة، وجميع الإحاطات الصوتية والبيانات الحية مقدمة لأغراض المعرفة والاستكشاف.\n\n• الاستخدام العادل: يُحظر أي استخدام غير مشروع أو إساءة استهلاك للموارد السحابية ونقاط التوليد الصوتي.",
   },
 };
 
@@ -375,6 +399,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     if (typeof document !== "undefined") {
       document.documentElement.lang = language;
       document.documentElement.dir = "ltr";
+      document.title = `${translations[language].brand} | ${translations[language].heroTitle}`;
     }
   }, [language]);
 
