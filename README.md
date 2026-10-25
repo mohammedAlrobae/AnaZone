@@ -1,205 +1,198 @@
-# 🌍 AnaZone — Real-Time Voice AI Companion & 3D Earth Explorer
+# AnaZone
 
-<p align="center">
-  <img src="frontend/public/confirmed.jpeg" alt="AnaZone Banner" width="100%" style="border-radius: 12px; max-height: 400px; object-fit: cover;" />
-</p>
+> Real-time conversational Arabic voice AI paired with photorealistic 3D Earth exploration.
 
-<p align="center">
-  <strong>Every Coordinate Has a Story</strong><br />
-  <em>Touch anywhere on the 3D globe to hear live breaking news, local weather, and rich history in natural human speech.</em>
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/FastAPI-0.110+-009688.svg?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI" />
-  <img src="https://img.shields.io/badge/Next.js-16.4+-000000.svg?style=flat-square&logo=next.js&logoColor=white" alt="Next.js" />
-  <img src="https://img.shields.io/badge/LangGraph-0.2+-2B5B84.svg?style=flat-square" alt="LangGraph" />
-  <img src="https://img.shields.io/badge/STT-Cloudflare_Whisper_Turbo-F38020.svg?style=flat-square&logo=cloudflare&logoColor=white" alt="Cloudflare Whisper" />
-  <img src="https://img.shields.io/badge/TTS-VoiceTut--TTS_Egyptian-FFD21E.svg?style=flat-square&logo=huggingface&logoColor=black" alt="VoiceTut-TTS" />
-  <img src="https://img.shields.io/badge/LLM-Groq_Cloud-F55036.svg?style=flat-square" alt="Groq Cloud" />
-  <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License" />
-</p>
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
+[![Python: 3.11+](https://img.shields.io/badge/Python-3.11+-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![Next.js: 16](https://img.shields.io/badge/Next.js-16.4+-000000.svg?style=flat-square&logo=next.js&logoColor=white)](https://nextjs.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Cloudflare Workers AI](https://img.shields.io/badge/STT-Whisper_Large_v3_Turbo-F38020.svg?style=flat-square&logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/workers-ai/)
+[![Groq Cloud](https://img.shields.io/badge/LLM-Groq_Cloud_Streaming-F55036.svg?style=flat-square)](https://groq.com)
+[![VoiceTut-TTS](https://img.shields.io/badge/TTS-Egyptian_Arabic_VoiceTut-FFD21E.svg?style=flat-square&logo=huggingface&logoColor=black)](https://huggingface.co)
 
 ---
 
-## 📖 Overview
+## What is AnaZone?
 
-**AnaZone** is a state-of-the-art planetary exploration and AI voice conversation platform. It bridges high-speed speech intelligence with photorealistic 3D geospatial exploration.
+AnaZone is an open-source, full-stack voice AI application that connects sub-second speech intelligence with a photorealistic 3D globe. Users can touch any coordinate on Earth or converse naturally by voice to explore live atmospheric weather, breaking local news, and geographical history in authentic Egyptian Arabic (*Masri*) and English.
 
-Users can tap anywhere on the 3D Earth or converse naturally in voice or text. AnaZone listens via sub-second edge speech-to-text, reasons using an autonomous LangGraph agent, fetches real-time atmospheric and news feeds, and replies with emotionally rich, human speech in both authentic Egyptian Arabic and English.
+Most Arabic voice systems rely on rigid Modern Standard Arabic (MSA), which sounds synthetic and unnatural for spontaneous spoken dialogue. AnaZone solves this by deploying voice models tuned for natural Egyptian phonetics and colloquial phrasing, orchestrated through a low-latency streaming pipeline.
 
-Built from the ground up on a **Zero-Retention architecture**, conversation history lives strictly in the visitor's browser memory—guaranteeing complete privacy with no persistent user tracking or database storage.
+Built on a **zero-retention architecture**, conversations are maintained strictly in the client's browser memory—no database storage, no audio file persistence, and no biometric fingerprinting.
 
 ---
 
-## 🏛️ System Architecture
+## System Architecture
 
 ```mermaid
 flowchart TD
-    User([👤 User / Microphone]) -->|PCM Audio Stream| Frontend[⚡ Next.js 16 Frontend App]
-    Frontend -->|SSE / REST POST| Backend[🚀 FastAPI Gateway]
+    User["User Microphone"] -->|"16-bit PCM Audio"| Frontend["Next.js 16 Web App"]
+    Frontend -->|"HTTP POST Multipart"| Backend["FastAPI Gateway"]
 
-    subgraph Audio & Reasoning Pipeline
-        Backend -->|Audio Bytes| CF[🌩️ Cloudflare Workers AI\nWhisper Large v3 Turbo]
-        CF -->|Clean Transcript + Auto-Language Detection| LG[🧠 LangGraph Agent Workflow]
+    subgraph AudioPipeline ["Audio & Reasoning Engine"]
+        Backend -->|"Audio Buffer"| STT["Cloudflare Workers AI<br/>Whisper Large v3 Turbo"]
+        STT -->|"Clean Transcript"| Router{"Intent Router<br/>LangGraph Agent"}
         
-        LG --> Router{Intent Classifier}
-        Router -->|Weather Query| Meteo[🌤️ Open-Meteo API\nLive Temperature, Humidity, Conditions]
-        Router -->|News Query| News[📰 NewsData.io API\nLocalized Breaking Regional News]
-        Router -->|General / History| Groq[⚡ Groq Cloud LLM\nStreaming Reasoning Engine]
-        
-        Meteo --> Synthesis[📝 Grounded Reply Synthesizer]
+        Router -->|"Weather Intent"| Weather["Open-Meteo API"]
+        Router -->|"News Intent"| News["NewsData.io API"]
+        Router -->|"General / History"| Groq["Groq Cloud LLM<br/>Streaming Inference"]
+
+        Weather --> Synthesis["Response Synthesizer"]
         News --> Synthesis
         Groq --> Synthesis
     end
 
-    subgraph Speech Synthesis
-        Synthesis -->|Clause-by-Clause Streaming| Splitter[✂️ Sentence & Pause Stream Splitter]
-        Splitter -->|Target Dialect Phrases| TTS[🎙️ VoiceTut-TTS on Hugging Face\nDiffusion Model spk_01, spk_10, spk_18]
-        TTS -->|Base64 WAV Chunks| Backend
+    subgraph SpeechPipeline ["Streaming Speech Synthesis"]
+        Synthesis -->|"Clause Tokens"| ClauseSplitter["Punctuation Stream Splitter"]
+        ClauseSplitter -->|"Sub-clause Phrases"| TTS["VoiceTut-TTS Hugging Face<br/>spk_01 / spk_10 / spk_18"]
+        TTS -->|"Base64 WAV Chunks"| StreamServer["SSE Streaming Controller"]
     end
 
-    Backend -->|Server-Sent Events (SSE)| Frontend
-    Frontend -->|Live Waveform & Audio Queue| Speaker([🔊 User Headphones / Speakers])
-    Frontend -->|Coordinates & Spatial Metadata| Globe[🌐 Google Photorealistic 3D Globe]
+    StreamServer -->|"Server-Sent Events Stream"| Frontend
+    Frontend -->|"Audio Queue"| AudioOut["User Headphones / Speakers"]
+    Frontend -->|"Camera Fly-To & HUD"| Globe3D["Google 3D Photorealistic Globe"]
 ```
 
----
+### Latency Budget & Pipeline Breakdown
 
-## ✨ Core Features
+To achieve a natural conversational flow without uncomfortable silence, AnaZone pipelines speech synthesis concurrently with token generation:
 
-- **🎙️ Real-Time Voice Agent**:
-  - Sub-second edge transcription via Cloudflare Workers AI Whisper Large v3 Turbo.
-  - Streaming audio clause-by-clause dispatch on sentence terminals (`.`, `!`, `?`, `؟`) and natural mid-sentence pauses (`،`, `,`, `؛`).
-  - Active VAD (Voice Activity Detection), RMS energy gating, and anti-hallucination suppression.
-- **🗣️ Authentic Egyptian Arabic & English Voice Personas**:
-  - **Yasmin (`spk_18_female`)**: Composed, professional, and clear tone.
-  - **Ahmed (`spk_01_male`)**: Friendly, approachable conversational guide.
-  - **Tareq (`spk_10_male`)**: High-energy, dynamic, and engaging persona.
-  - Consistent speaker identity preserved across both Arabic and English.
-- **🧠 Autonomous LangGraph Multi-Tool Agent**:
-  - Live Weather via Open-Meteo (no API key needed, zero-cost, worldwide).
-  - Breaking Local News via NewsData.io with country-code resolution and automatic fallback.
-  - Global Geocoding for coordinates resolution directly from conversational queries.
-- **🌐 Photorealistic 3D Earth Explorer**:
-  - Interactive globe with real-time coordinate tracking and location HUD.
-  - Quick-jump destinations (Pyramids of Giza, Tokyo, Paris, Dubai, New York, Petra).
-  - Atmospheric multi-layer environmental rain effects.
-- **🔒 Zero-Retention Privacy**:
-  - Ephemeral in-memory chat session (cleared on page reload or tab close).
-  - No database, no user tracking, no voice biometric data retained.
-- **🌐 Dynamic Bilingual UI**:
-  - Instant toggle between Arabic (RTL typography with LTR layout integrity) and English.
-  - Dynamic `document.title` synchronization.
+| Stage | Technology | Typical Latency | Function |
+| :--- | :--- | :--- | :--- |
+| **Speech-to-Text** | Cloudflare Workers AI (Whisper Large v3 Turbo) | ~150–280 ms | Edge-accelerated multilingual transcription with auto-language detection |
+| **Agent Reasoning** | LangGraph + Groq Cloud (`gpt-oss-120b` / `qwen3.8-27b`) | ~120 ms TTFT | Intent classification, external tool calling, and response generation |
+| **Punctuation Dispatch** | Regex Stream Tokenizer | < 5 ms | Splits token stream on terminal punctuation (`.!?؟`) and pauses (`،,؛`) |
+| **Speech Synthesis** | VoiceTut-TTS on Hugging Face ZeroGPU | ~300–450 ms / chunk | Generates 24 kHz WAV chunks per clause rather than waiting for full response |
+| **Client Audio Queue** | Web Audio API / HTML5 Audio | Immediate | Seamless sequential playback with real-time waveform visualization |
 
 ---
 
-## 📂 Repository Structure
+## Key Features
+
+- **Conversational Voice AI**: Sub-second transcription via Cloudflare Whisper Turbo with energy-gated VAD to eliminate background noise hallucinations.
+- **Dialectal Egyptian Voice Personas**:
+  - `spk_18_female` (*Yasmin*): Composed, articulate, and clear tone.
+  - `spk_01_male` (*Ahmed*): Warm, conversational, and approachable guide.
+  - `spk_10_male` (*Tareq*): Dynamic, energetic, and engaging narrator.
+- **Autonomous Tool-Using Agent**: LangGraph state machine dynamically calls real-time tools:
+  - **Live Weather**: Open-Meteo API (temperature, wind speed, atmospheric conditions worldwide, no API key required).
+  - **Breaking News**: NewsData.io integration mapped to ISO country codes with regional fallbacks.
+  - **Reverse Geocoding**: Direct coordinate lookup for planetary locations.
+- **Photorealistic 3D Earth Explorer**: Hardware-accelerated 3D globe with interactive coordinate HUD, quick-travel landmarks (Giza Pyramids, Tokyo, Paris, Dubai, New York, Petra), and atmospheric weather layers.
+- **Zero-Retention Privacy**: Stateless by design. All session context resides solely in React component state. Closing the tab or refreshing wipes all chat history.
+- **Bilingual Interface**: Seamless switching between Arabic (RTL typography with clean structural alignment) and English.
+
+---
+
+## Project Structure
 
 ```text
 AnaZone/
 ├── backend/
-│   ├── main.py                  # FastAPI server entry point, CORS & routes
-│   ├── config.py                # Environment variables & voice profile definitions
-│   ├── streaming.py             # Server-Sent Events (SSE) & fast clause chunking
+│   ├── main.py                  # FastAPI entry point, CORS middleware, and route mounting
+│   ├── config.py                # Environment loading and persona metadata definitions
+│   ├── streaming.py             # Server-Sent Events (SSE) and fast clause chunking
 │   ├── Dockerfile               # Production container definition
-│   ├── requirements.txt         # Backend Python dependencies
+│   ├── requirements.txt         # Pinned Python dependencies
 │   ├── routers/
-│   │   ├── voice.py             # STT, TTS, pipeline & stream endpoints
-│   │   ├── chat.py              # Text chat, greetings & suggestions
-│   │   └── graph_viz.py         # LangGraph workflow visualizer endpoint
-│   ├── services/
-│   │   ├── agent_graph.py       # LangGraph state machine & tool nodes
-│   │   ├── stt_service.py       # Cloudflare Workers AI Whisper integration
-│   │   ├── tts_service.py       # Hugging Face VoiceTut-TTS client
-│   │   └── llm_service.py       # Groq Cloud streaming inference
-│   └── voice_samples/           # Pre-recorded audition audio samples
+│   │   ├── voice.py             # STT, TTS, full voice pipeline, and SSE streaming
+│   │   ├── chat.py              # Text chat, suggestions, and warm spoken greetings
+│   │   └── graph_viz.py         # LangGraph topology inspection route
+│   └── services/
+│       ├── agent_graph.py       # LangGraph state machine and tool orchestration
+│       ├── stt_service.py       # Cloudflare Workers AI Whisper integration
+│       ├── tts_service.py       # Hugging Face VoiceTut-TTS client
+│       └── llm_service.py       # Groq Cloud streaming inference engine
 │
 ├── frontend/
 │   ├── src/
 │   │   ├── app/
-│   │   │   ├── layout.tsx       # Root layout, HTML metadata & typography
-│   │   │   ├── page.tsx         # Main page orchestration
-│   │   │   ├── globals.css      # Core styles & custom animations
-│   │   │   └── graph/page.tsx   # LangGraph visualizer interactive UI
+│   │   │   ├── layout.tsx       # Root layout, metadata, and typography
+│   │   │   ├── page.tsx         # Main page assembly (Hero, Globe, Voice Agent)
+│   │   │   ├── globals.css      # Design system tokens and custom keyframe animations
+│   │   │   └── docs/            # Route displaying project easter egg
 │   │   ├── components/
 │   │   │   ├── HeroSection.tsx  # Dynamic hero banner with responsive typography
-│   │   │   ├── VoiceSelector.tsx# 3-voice persona selector & audio audition
-│   │   │   ├── UnifiedVoiceChat.tsx # Mic capture, wave recorder & streaming SSE
-│   │   │   ├── Google3DRealMap.tsx  # Photorealistic 3D globe & coordinates HUD
-│   │   │   ├── Navbar.tsx       # Navigation bar & language switcher
-│   │   │   └── Footer.tsx       # Modern footer with zero-retention privacy modal
+│   │   │   ├── UnifiedVoiceChat.tsx # Mic capture, wave recorder, and SSE stream consumer
+│   │   │   ├── Google3DRealMap.tsx  # Photorealistic 3D globe and coordinate HUD
+│   │   │   ├── Navbar.tsx       # Navigation bar and bilingual language toggle
+│   │   │   └── Footer.tsx       # Minimalist footer with zero-retention privacy modal
 │   │   └── lib/
-│   │       ├── api.ts           # Type-safe API client & SSE chunk parser
-│   │       ├── i18n.tsx         # English / Arabic internationalization store
-│   │       └── wavRecorder.ts   # Hardware-synced 16-bit PCM WAV mic recorder
-│   ├── package.json             # Frontend dependencies & Next.js scripts
-│   └── next.config.ts           # Next.js configuration with Turbopack rules
+│   │       ├── api.ts           # Type-safe API client with trailing-slash sanitization
+│   │       ├── i18n.tsx         # Arabic/English localization context
+│   │       └── wavRecorder.ts   # Hardware-synced 16-bit PCM WAV audio recorder
+│   ├── package.json             # Frontend dependencies
+│   └── next.config.ts           # Next.js configuration with Turbopack optimizations
 │
-├── .env.example                 # Clean environment variables template
-├── Procfile                     # Render / Railway process file
-├── vercel.json                  # Mono-repo configuration for Vercel
+├── .env.example                 # Environment variables template
+├── Procfile                     # Process file for Render / Railway deployments
+├── vercel.json                  # Mono-repo root directory mapping for Vercel
 ├── LICENSE                      # MIT License
 └── README.md                    # Project documentation
 ```
 
 ---
 
-## 🔑 Environment Configuration
+## Quickstart (Local Development)
 
-Copy `.env.example` to `.env` in the root directory:
+### 1. Prerequisites
+- **Python**: 3.11 or higher
+- **Node.js**: 20 LTS or higher
+- **Package Manager**: `npm` (v10+) or `pnpm`
 
+### 2. Clone Repository
+```bash
+git clone https://github.com/mohammedAlrobae/AnaZone.git
+cd AnaZone
+```
+
+### 3. Environment Setup
+Copy the example environment file and fill in your API credentials:
 ```bash
 cp .env.example .env
 ```
 
-| Variable | Required | Description | Provider |
+| Key | Required | Purpose | Provider |
 | :--- | :---: | :--- | :--- |
-| `CLOUDFLARE_API_TOKEN` | **Yes** | Cloudflare API Token with Workers AI read access | [Cloudflare Dashboard](https://dash.cloudflare.com/) |
-| `CLOUDFLARE_ACCOUNT_ID` | **Yes** | Cloudflare Account ID | [Cloudflare Dashboard](https://dash.cloudflare.com/) |
+| `CLOUDFLARE_API_TOKEN` | **Yes** | Speech-to-Text inference via Workers AI | [Cloudflare Dashboard](https://dash.cloudflare.com/) |
+| `CLOUDFLARE_ACCOUNT_ID` | **Yes** | Cloudflare account identifier | [Cloudflare Dashboard](https://dash.cloudflare.com/) |
 | `CLOUDFLARE_WHISPER_MODEL` | No | Defaults to `@cf/openai/whisper-large-v3-turbo` | Cloudflare Workers AI |
-| `cloud_groq_api` / `GROQ_API_KEY` | **Yes** | Groq Cloud API Key for high-speed LLM inference | [Groq Console](https://console.groq.com/) |
+| `cloud_groq_api` / `GROQ_API_KEY` | **Yes** | High-speed LLM reasoning and agent graph | [Groq Console](https://console.groq.com/) |
 | `LLM_MODEL` | No | Primary LLM model (default: `openai/gpt-oss-120b`) | Groq Cloud |
-| `LLM_FALLBACK_MODEL` | No | Fallback LLM model (default: `qwen/qwen3.8-27b`) | Groq Cloud |
-| `HF_TOKEN` | **Yes** | Hugging Face User Access Token (read permission) | [Hugging Face Settings](https://huggingface.co/settings/tokens) |
-| `NEWSAPIKEY` | Optional | API Key for localized breaking news updates | [NewsData.io](https://newsdata.io/) |
-| `NEXT_PUBLIC_API_URL` | No | Backend API URL (default: `http://localhost:8000`) | Frontend config |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Optional | Google Maps Platform Key for 3D Photorealistic Map | [Google Cloud Console](https://console.cloud.google.com/) |
+| `LLM_FALLBACK_MODEL` | No | Fallback LLM (default: `qwen/qwen3.8-27b`) | Groq Cloud |
+| `HF_TOKEN` | **Yes** | Hugging Face Access Token with read access | [Hugging Face Settings](https://huggingface.co/settings/tokens) |
+| `NEWSAPIKEY` | Optional | Localized breaking news feeds | [NewsData.io](https://newsdata.io/) |
+| `NEXT_PUBLIC_API_URL` | No | Backend origin (default: `http://localhost:8000`) | Frontend config |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Optional | Google Maps Platform 3D Photorealistic Tiles | [Google Cloud Console](https://console.cloud.google.com/) |
 
----
-
-## 🚀 Getting Started (Local Development)
-
-### 1. Prerequisites
-- **Python**: 3.11 or 3.12
-- **Node.js**: 20+ or 22+ LTS
-- **npm**: 10+
-
-### 2. Backend Setup
+### 4. Backend Setup
 ```bash
-# Navigate to the workspace root
-cd AnaZone
-
-# Create and activate virtual environment
+# Create and activate Python virtual environment
 python -m venv .venv
+
+# On Linux/macOS:
+source .venv/bin/activate
 
 # On Windows (PowerShell):
 .venv\Scripts\Activate.ps1
-# On Linux/macOS:
-source .venv/bin/activate
 
 # Install dependencies
 pip install -r backend/requirements.txt
 
 # Start FastAPI development server
-python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
-- Interactive Swagger API Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-- Health Check: [http://localhost:8000/health](http://localhost:8000/health)
 
-### 3. Frontend Setup
+Verify backend health:
 ```bash
-# In a new terminal, navigate to the frontend directory
-cd AnaZone/frontend
+curl http://localhost:8000/health
+# {"status":"healthy"}
+```
+
+### 5. Frontend Setup
+In a separate terminal:
+```bash
+cd frontend
 
 # Install dependencies
 npm install
@@ -207,61 +200,94 @@ npm install
 # Start Next.js development server
 npm run dev
 ```
-- Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 🚢 Production Deployment
+## Deployment Guide
 
-AnaZone is architected for **zero-cost tier hosting** with complete separation of concerns:
+AnaZone separates frontend static/edge serving from backend Python compute:
 
-### 1. Backend (FastAPI) on Render / Railway
-- **Option A: GitHub Integration with Procfile**:
-  - Connect your GitHub repository to [Render](https://render.com).
-  - Select **Web Service**.
-  - Runtime: **Python 3**.
-  - Build Command: `pip install -r backend/requirements.txt`.
-  - Start Command: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`.
-- **Option B: Docker Deployment**:
-  - Point Dockerfile Path to `backend/Dockerfile`.
-- Set Environment Variables (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `cloud_groq_api`, `HF_TOKEN`, `NEWSAPIKEY`).
+### Backend Deployment (Render / Railway / Fly.io)
 
-### 2. Frontend (Next.js) on Vercel
-- Connect your GitHub repository to [Vercel](https://vercel.com).
-- Root directory is automatically resolved via [`vercel.json`](file:///d:/AnaZone/vercel.json) (`rootDirectory: "frontend"`).
-- Framework preset: **Next.js**.
-- Build command: `next build`.
-- Add Environment Variable:
-  - `NEXT_PUBLIC_API_URL`: Your deployed backend URL (e.g. `https://anazone-backend.onrender.com`).
-  - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`: (Optional) Your Google Maps key.
+Using **Render** as an example:
+1. Create a new **Web Service** connected to your repository.
+2. Select **Python 3** environment:
+   - **Build Command**: `pip install -r backend/requirements.txt`
+   - **Start Command**: `uvicorn backend.main:app --host 0.0.0.0 --port 10000`
+3. Add backend environment variables (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `cloud_groq_api`, `HF_TOKEN`, `NEWSAPIKEY`).
+4. Once deployed, copy your backend URL (e.g., `https://anazone-backend.onrender.com`).
+
+*(Note: Docker is also supported out of the box using [`backend/Dockerfile`](backend/Dockerfile)).*
+
+### Frontend Deployment (Vercel)
+
+1. Import your GitHub repository into [Vercel](https://vercel.com).
+2. Set **Root Directory** to `frontend` (pre-configured in [`vercel.json`](vercel.json)).
+3. Add the following Environment Variables in project settings:
+   - `NEXT_PUBLIC_API_URL`: Your deployed backend URL (e.g. `https://anazone-backend.onrender.com`).
+   - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`: Your Google Maps key.
+4. Click **Deploy**. Vercel will build the Next.js bundle and issue your production URL.
 
 ---
 
-## 📡 REST & Streaming API Reference
+## API Reference
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `GET` | `/health` | Health check endpoint returning `{"status": "healthy"}` |
-| `GET` | `/api/voice/voices` | Returns active voice personas, roles, and audition sample URLs |
-| `GET` | `/api/voice/sample/{voice_id}` | Streams pre-rendered WAV audio sample for the selected persona |
-| `POST` | `/api/voice/transcribe` | Transcribes audio bytes via Cloudflare Whisper Turbo |
+| `GET` | `/health` | Service health check returning `{"status": "healthy"}` |
+| `GET` | `/api/voice/voices` | Returns active personas, voice IDs, and audio audition samples |
+| `GET` | `/api/voice/sample/{voice_id}` | Streams pre-rendered audio sample for the requested persona |
+| `POST` | `/api/voice/transcribe` | Transcribes 16-bit PCM audio via Cloudflare Whisper Turbo |
 | `POST` | `/api/voice/synthesize` | Direct text-to-speech synthesis using VoiceTut-TTS |
-| `POST` | `/api/voice/pipeline` | Complete end-to-end voice pipeline (STT ➡️ LangGraph ➡️ TTS) |
-| `POST` | `/api/voice/pipeline/stream` | **Primary SSE Streaming Route**: streams transcript, tokens, and audio chunks |
-| `POST` | `/api/chat` | Text-only chat interaction (bypasses TTS generation) |
-| `POST` | `/api/chat/greeting` | Generates initial warm spoken audio greeting on session start |
-| `GET` | `/api/graph/state` | Returns the LangGraph topology and node execution schema |
+| `POST` | `/api/voice/pipeline` | Complete synchronous pipeline (STT ➔ LangGraph ➔ TTS) |
+| `POST` | `/api/voice/pipeline/stream` | **Primary SSE Endpoint**: streams transcription, text tokens, and audio chunks |
+| `POST` | `/api/chat` | Text-only conversational interaction |
+| `POST` | `/api/chat/greeting` | Generates initial spoken audio greeting on session start |
+| `GET` | `/api/graph/state` | Returns the LangGraph execution graph and node topology |
 
 ---
 
-## 🛡️ Security & Zero-Retention Privacy
+## Frequently Asked Questions & Troubleshooting
 
-1. **No Data Storage**: Spoken audio and chat transcripts are processed strictly in-memory and immediately discarded after processing.
-2. **CORS Hardened**: CORS middleware supports dynamic cloud environments with secure header handling.
-3. **No Biometric Tracking**: Speech recognition produces transient textual transcripts without storing voice fingerprints or biometric vectors.
+<details>
+<summary><strong>Why is there a short delay on the very first voice response?</strong></summary>
+
+VoiceTut-TTS is hosted on Hugging Face ZeroGPU. If the space is cold, spinning up the GPU worker can take a few seconds on the very first generation. Subsequent requests execute with typical latencies of ~300–450 ms per chunk.
+</details>
+
+<details>
+<summary><strong>Why does the microphone require HTTPS in production?</strong></summary>
+
+Modern web browsers restrict access to the Web Audio API and `navigator.mediaDevices.getUserMedia()` to secure contexts (`https://` or `localhost`). In production on Vercel, SSL certificates are provisioned automatically.
+</details>
+
+<details>
+<summary><strong>Can I use OpenAI Whisper instead of Cloudflare Workers AI?</strong></summary>
+
+Yes. The STT layer in [`backend/services/stt_service.py`](backend/services/stt_service.py) is modular. Cloudflare Workers AI was chosen for its edge proximity, zero infrastructure overhead, and low latency on `whisper-large-v3-turbo`.
+</details>
+
+<details>
+<summary><strong>What happens if the Google Maps 3D key is missing or invalid?</strong></summary>
+
+The 3D map component includes an interactive fallback with celestial space background and coordinates telemetry, allowing all voice and AI interactions to function normally even without 3D photorealistic tiles loaded.
+</details>
 
 ---
 
-## 📄 License
+## Contributing
 
-This project is licensed under the [MIT License](LICENSE).
+Contributions, bug reports, and suggestions are welcome.
+1. Fork the repository.
+2. Create your feature branch (`git checkout -b feature/audio-optimization`).
+3. Commit your changes (`git commit -m 'feat: enhance audio chunk buffering'`).
+4. Push to the branch (`git push origin feature/audio-optimization`).
+5. Open a Pull Request.
+
+---
+
+## License
+
+Distributed under the [MIT License](LICENSE).
